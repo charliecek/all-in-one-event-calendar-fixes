@@ -1,1 +1,1 @@
-# all-in-one-event-calendar-fixes
+# All-in-One Event Calendar Fixes
