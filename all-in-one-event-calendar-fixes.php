@@ -1071,7 +1071,6 @@ class AI1EC_Fixes {
   }
   
   public function ai1ecf_send_newsletter_reminder() {
-    // TODO Check for day and whether the reminder has already been sent for the given day //
     $aOptions = $this->ai1ecf_get_option_field("reminder");
     foreach (array('time-hour', 'time-minute','day') as $key) {
       if (!isset($aOptions[$key]) || empty($aOptions[$key])) {
@@ -1079,20 +1078,32 @@ class AI1EC_Fixes {
       }
     }
 
-    if (intval($aOptions["day"]) !== date("N")) {
-      // Not the right day //
-      return;
-    }
     $strLastSentDate = $this->ai1ecf_get_option_field("reminder_last_sent_date", "");
     $strToday = date("Ymd");
     if (!empty($strLastSentDate) && $strLastSentDate == $strToday) {
       // Today's reminder has already been sent //
       return;
     }
-    $iTimeNow = date("G")*100+date("i");
-    $iTimeScheduled = $aOptions['time-hour']*100+$aOptions['time-minute'];
-    if ($iTimeNow < $iTimeScheduled) {
-      return;
+    if (intval($aOptions["day"]) !== date("N")) {
+      // Not the right day //
+      if (!empty($strLastSentDate)) {
+        $iLastSentDate = intval($strLastSentDate);
+        $iToday = intval($strToday);
+        if ($iToday - $iLastSentDate > 7) {
+          // continue with sending - the last reminder was sent more than a week ago! //
+        } else {
+          return;
+        }
+      } else {
+        return;
+      }
+    } else {
+      // Today's reminder has not yet been sent AND it's the right day, so we check the time //
+      $iTimeNow = date("G")*100+date("i");
+      $iTimeScheduled = $aOptions['time-hour']*100+$aOptions['time-minute'];
+      if ($iTimeNow < $iTimeScheduled) {
+        return;
+      }
     }
     
     // send email
