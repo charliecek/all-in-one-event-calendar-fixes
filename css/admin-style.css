@@ -1,0 +1,23 @@
+table.widefat th.check-column,
+table.widefat td.check-column{
+  padding: 0;
+  vertical-align: middle;
+}
+table.widefat td input[type="text"]{
+  width: 100%;
+  min-height: 1.5em;
+  height: 100%;
+}
+table.ai1ecf_ai1ec_fixes-table.hidden{
+  display: block !important;
+  visibility: hidden;
+  position: absolute;
+  top: -999em;
+  width: 1px;
+}
+input.button.hidden{
+/*   display: none; */
+}
+h2.nav-tab-wrapper.hidden{
+/*   display: none; */
+}
