@@ -11,6 +11,8 @@ define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
 define( "AI1ECF_OPTION_LOC_PREFIX", "ai1ecf_location_" );
+define( "AI1ECF_OPTION_NONLOC_FIELDS", "reminder,cats-tabs");
+define( "AI1ECF_OPTION_NONLOC_PREFIX", "ai1ecf_nonlocation_option_" );
 define( "AI1ECF_PATH_TO_TEMPLATES", __DIR__ . "/view/" );
 define( "AI1ECF_LOCATION_OVERRIDE_POSTMETA_ID", "ai1ecf-location-override" );
 define( "AI1ECF_SKIP_EVENT_UPDATE_FROM_FEED_POSTMETA_ID", "ai1ecf-location-skip-event-update-from-feed" );
@@ -47,6 +49,8 @@ class AI1EC_Fixes {
     add_action( 'admin_menu', array( $this, "ai1ecf_add_options_page" ) );
   
     add_action( 'ai1ecf_add_missing_featured_images', array( $this, 'ai1ecf_add_missing_featured_images' ) );
+    add_action( 'ai1ecf_send_newsletter_reminder', array( $this, 'ai1ecf_send_newsletter_reminder' ) );
+    add_action( 'ai1ecf_add_missing_categories_and_tags', array( $this, 'ai1ecf_add_missing_categories_and_tags' ) );
     
     
     $this->aFieldToPlaceholders = array(
@@ -59,6 +63,10 @@ class AI1EC_Fixes {
       'location-metabox'              => array('location-metabox-title', 'location-metabox-description', 'location-metabox-value',
                                                 'skip-event-update-from-feed-title', 'skip-event-update-from-feed-desc', 'skip-event-update-from-feed-checkboxes'),
       'skip-event-update-checkboxes'  => array( 'skip-event-update-checkbox-key', 'skip-event-update-checkbox-name', 'skip-event-update-checkbox-checked' ),
+      'reminder'                      => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'label-email-body', 'label-time', 'label-day',
+                                                'users', 'reminder_users', 'email-addresses', 'email-subject', 'email-body-wp-editor', 'reminder_email-body-wp-editor', 'time-minute', 'time-hour', 'day',
+                                                'options-weekdays', 'options-hour', 'options-minute' ),
+      // ''  => array(  ),
     );
     $this->aPlaceholderValues = array(
       'header-venue'                        => __( "Venue", "ai1ecf" ),
@@ -70,6 +78,8 @@ class AI1EC_Fixes {
       'header-info-venue'                   => __( "These rules affect hover pop-ins (calendar, agenda widget), single event pages, excerpts and the SRD newsletter theme.", "ai1ecf" ),
       'header-info-address'                 => __( "These rules affect hover pop-ins (calendar, agenda widget) and the SRD newsletter theme. <strong><em>They do not affect</em></strong> single event pages and excerpts.", "ai1ecf" ),
       'header-info-contact_name'            => __( "These rules affect hover pop-ins (calendar, agenda widget), single event pages, excerpts and the SRD newsletter theme.", "ai1ecf" ),
+      'header-reminder'                     => __( "Newsletter reminder", "ai1ecf" ),
+      'header-cats-tabs'                    => __( "Automatic categories and tabs", "ai1ecf" ),
       'button-value'                        => __( "Save", "ai1ecf" ),
       'location-replacement-enabled-label'  => __( "Enable location replacement rules?", "ai1ecf" ),
       'ai1ecf-metabox-title'                => __( "All-in-One Event Calendar Fixes", "ai1ecf" ),
@@ -80,6 +90,20 @@ class AI1EC_Fixes {
       'skip-event-update-checkbox_time'     => __( "Time", "ai1ecf" ),
       'skip-event-update-checkbox_place'    => __( "Place", "ai1ecf" ),
       'skip-event-update-checkbox_contact'  => __( "Contact", "ai1ecf" ),
+      'label-users'                         => __( "Send reminders to these users: ", "ai1ecf" ),
+      'label-email-addresses'               => __( "Send reminders to these email addresses as well: ", "ai1ecf" ),
+      'label-email-subject'                 => __( "Email reminder subject: ", "ai1ecf" ),
+      'label-email-body'                    => __( "Email reminder body: ", "ai1ecf" ),
+      'label-day'                           => __( "Reminder day", "ai1ecf" ),
+      'label-day-1'                         => __( "Monday", "ai1ecf" ),
+      'label-day-2'                         => __( "Tuesday", "ai1ecf" ),
+      'label-day-3'                         => __( "Wednesday", "ai1ecf" ),
+      'label-day-4'                         => __( "Thursday", "ai1ecf" ),
+      'label-day-5'                         => __( "Friday", "ai1ecf" ),
+      'label-day-6'                         => __( "Saturday", "ai1ecf" ),
+      'label-day-7'                         => __( "Sunday", "ai1ecf" ),
+      'label-time'                          => __( "Reminder time", "ai1ecf" ),
+      // ''  => __( "", "ai1ecf" ),
     );
 
     $this->bLocationReplacementEnabled = get_option( 'ai1ecf-location-replacement-enabled', false );
@@ -102,10 +126,18 @@ class AI1EC_Fixes {
     if ( !wp_next_scheduled( 'ai1ecf_add_missing_featured_images' ) ) {
       wp_schedule_event( time(), 'hourly', 'ai1ecf_add_missing_featured_images');
     }
+    if ( !wp_next_scheduled( 'ai1ecf_send_newsletter_reminder' ) ) {
+      wp_schedule_event( time(), 'hourly', 'ai1ecf_send_newsletter_reminder');
+    }
+    if ( !wp_next_scheduled( 'ai1ecf_add_missing_categories_and_tags' ) ) {
+      wp_schedule_event( time(), 'twicedaily', 'ai1ecf_add_missing_categories_and_tags');
+    }
   }
   
   public static function ai1ecf_deactivate() {
     wp_clear_scheduled_hook('ai1ecf_add_missing_featured_images');
+    wp_clear_scheduled_hook('ai1ecf_send_newsletter_reminder');
+    wp_clear_scheduled_hook('ai1ecf_add_missing_categories_and_tags');
   }
 
   public function ai1ecf_translations_load() {
@@ -198,6 +230,12 @@ class AI1EC_Fixes {
     return preg_replace('/[^a-z0-9]/', "_", strtolower(trim($strValue)));
   }
   
+  private function ai1ecf_get_wp_editor($strContent, $strEditorID, $aSettings = array()) {
+    ob_start();
+    wp_editor($strContent, $strEditorID, $aSettings);
+    return ob_get_clean();
+  }
+  
   public function ai1ecf_options_page() {
     echo "<h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
 
@@ -205,15 +243,141 @@ class AI1EC_Fixes {
       $this->ai1ecf_save_option_page_options($_POST);
     }
     
-    $aFields = explode(',', AI1ECF_OPTION_LOC_FIELDS);
+    $strTablesTemplate = '';
+    $strTabs = '';
     $strTableTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-table.html");
     $strTabTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-tab.html");
+    $strDivTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div.html");
     $aFieldToPlaceholders = $this->aFieldToPlaceholders;
     $aPlaceholderValues = $this->aPlaceholderValues;
     
-    $strTablesTemplate = '';
-    $strTabs = '';
+    // Reminder, category + tag tabs //
+    $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
+    foreach ($aFieldsNonLoc as $strField) {
+      $strRowTemplate = '';
+      $strHeaderTemplate = '';
+      $strDivTemplateLoc = $strDivTemplate;
+      $strBodyTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body_".$strField.".html");
+      $aOptionValues = $this->ai1ecf_get_option_field($strField);
+      // echo "<pre>".var_export($aOptionValues, true)."</pre>";
+      foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
+        $strCustomPlaceholder = $strField."_".$strPlaceholder;
+        if (!isset($aPlaceholderValues[$strPlaceholder])) {
+          $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
+          if ($strPlaceholder == "email-body-wp-editor") {
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            $aSettings = array(
+              'media_buttons' => false,
+            );
+            $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_get_wp_editor( $mixOptionValue, $strCustomPlaceholder, $aSettings );
+          } elseif ($strPlaceholder == "options-weekdays") {
+            $strCustomPlaceholder = 'day';
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            $strDayOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
+            $aPlaceholderValues[$strPlaceholder] = '';
+            
+            for ($i = 1; $i <= 7; $i++) {
+              if ($mixOptionValue == $i) {
+                $strSelected = 'selected="selected"';
+              } else {
+                $strSelected = '';
+              }
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%value%%', '%%selected%%', '%%label%%' ),
+                array( $i, $strSelected, $aPlaceholderValues['label-day-'.$i] ),
+                $strDayOptionTemplate
+              );
+            }
+          } elseif ($strPlaceholder == "options-hour") {
+            $strCustomPlaceholder = 'time-hour';
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            $strHourOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
+            $aPlaceholderValues[$strPlaceholder] = '';
+            
+            for ($i = 0; $i <= 23; $i++) {
+              if ($mixOptionValue == $i) {
+                $strSelected = 'selected="selected"';
+              } else {
+                $strSelected = '';
+              }
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%value%%', '%%selected%%', '%%label%%' ),
+                array( $i, $strSelected, $i ),
+                $strHourOptionTemplate
+              );
+            }
+          } elseif ($strPlaceholder == "options-minute") {
+            $strCustomPlaceholder = 'time-minute';
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            $strMinuteOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
+            $aPlaceholderValues[$strPlaceholder] = '';
+            
+            for ($i = 0; $i <= 59; $i++) {
+              if ($mixOptionValue == $i) {
+                $strSelected = 'selected="selected"';
+              } else {
+                $strSelected = '';
+              }
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%value%%', '%%selected%%', '%%label%%' ),
+                array( $i, $strSelected, $i ),
+                $strMinuteOptionTemplate
+              );
+            }
+          } elseif ($strPlaceholder == "users") {
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            if (empty($mixOptionValue)) {
+              $mixOptionValue = array();
+            }
+            $aArgs = array(
+              'blog_id' => get_current_blog_id(),
+            );
+            $aUsers = get_users( $aArgs );
+            $strUserTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body_".$strField."_user.html");
+            foreach ($aUsers as $objUser) {
+              if (in_array($objUser->ID, $mixOptionValue)) {
+                $strChecked = 'checked="checked"';
+              } else {
+                $strChecked = '';
+              }
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%prefix%%', '%%user_id%%', '%%email%%', '%%name%%', '%%checked%%' ),
+                array( $strField.'_', $objUser->ID, esc_html( $objUser->user_email ), esc_html( $objUser->display_name ), $strChecked ),
+                $strUserTemplate
+              );
+            }
+          } else {
+            // Use option value or empty string //
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+          }
+        }
+      }
+      
+      // Replace placeholders in (local) DIV template //
+      $strDivTemplateLoc = str_replace(
+        array( '%%header%%', '%%rows%%', '%%div-id%%', '%%body%%' ), 
+        array( $strHeaderTemplate, $strRowTemplate, $strField, $strBodyTemplate ),
+        $strDivTemplateLoc
+      );
+
+      foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
+        $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
+        $strDivTemplateLoc = str_replace('%%'.$strPlaceholder.'%%', $strPlaceholderValue, $strDivTemplateLoc);
+      }
+
+      // Add replaced DIV template to tab content template //
+      $strTablesTemplate .= $strDivTemplateLoc;
+      // Add replacce TAB template //
+      $strTabs .= str_replace(
+        array( '%%div-id%%', '%%tab-title%%', '%%type%%' ),
+        array( $strField, $aPlaceholderValues['header-'.$strField], 'nonloc' ),
+        $strTabTemplate
+      );
+    }
     
+    // Location override tabs //
+    $aOptionValues = array();
+    $aFields = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     foreach ($aFields as $strField) {
       $strRowTemplate = '';
       $strHeaderTemplate = '';
@@ -271,15 +435,15 @@ class AI1EC_Fixes {
       $strHeaderTemplate .= $strHeaderTemplateLoc;
 
       $strTableTemplateLoc = str_replace(
-        array( '%%header%%', '%%rows%%', '%%table-id%%' ), 
+        array( '%%header%%', '%%rows%%', '%%div-id%%' ), 
         array( $strHeaderTemplate, $strRowTemplate, $strField ),
         $strTableTemplateLoc
       );
 
       $strTablesTemplate .= $strTableTemplateLoc;
       $strTabs .= str_replace(
-        array( '%%table-id%%', '%%tab-title%%' ),
-        array( $strField, $aPlaceholderValues['header-'.$strField] ),
+        array( '%%div-id%%', '%%tab-title%%', '%%type%%' ),
+        array( $strField, $aPlaceholderValues['header-'.$strField], 'loc' ),
         $strTabTemplate
       );
     }
@@ -290,6 +454,7 @@ class AI1EC_Fixes {
     } else {
       $strEnabledChecked = '';
     }
+    
     $strFormTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-form.html");
     $strFormTemplate = str_replace(
       array('%%tables%%', '%%button-value%%', '%%checked%%', '%%location-replacement-enabled-label%%', '%%tabs%%'),
@@ -298,13 +463,14 @@ class AI1EC_Fixes {
     );
     echo $strFormTemplate;
 
-    file_put_contents(__DIR__.'/'."debug-kk", var_export($aRules, true));
+    // file_put_contents(__DIR__.'/'."debug-kk", var_export($aRules, true));
 
   }
   
   private function ai1ecf_save_option_page_options($aPost) {
 
-    $aFields = explode(',', AI1ECF_OPTION_LOC_FIELDS);
+    $aFieldsLoc = explode(',', AI1ECF_OPTION_LOC_FIELDS);
+    $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
     
     if (isset($aPost['ai1ecf-location-replacement-enabled']) && $aPost['ai1ecf-location-replacement-enabled'] === "1") {
       $bEnabled = true;
@@ -314,7 +480,22 @@ class AI1EC_Fixes {
     update_option( 'ai1ecf-location-replacement-enabled', $bEnabled, true );
     $this->bLocationReplacementEnabled = $bEnabled;
     
-    foreach ($aFields as $strField) {
+    $aFieldToPlaceholders = $this->aFieldToPlaceholders;
+    $aPlaceholderValues = $this->aPlaceholderValues;
+    foreach ($aFieldsNonLoc as $strField) {
+      $aFieldOptionValues = $this->ai1ecf_get_option_field($strField);
+      foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
+        if (!isset($aPlaceholderValues[$strPlaceholder])) {
+          if (isset($aPost[$strPlaceholder]) && !empty($aPost[$strPlaceholder])) {
+            $aFieldOptionValues[$strPlaceholder] = $aPost[$strPlaceholder];
+          }
+        }
+      }
+      $this->ai1ecf_save_option_field( $strField, $aFieldOptionValues );
+      // echo "<pre>".var_export($aFieldOptionValues, true)."</pre>";
+    }
+    
+    foreach ($aFieldsLoc as $strField) {
       $aOptionValues[$strField] = $this->ai1ecf_get_location_field($strField);
       $aRules[$strField] = array();
       if ($strField !== 'venue') {
@@ -377,6 +558,16 @@ class AI1EC_Fixes {
     }
   }
   
+  private function ai1ecf_get_option_field($strField, $default = array()) {
+    $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField;
+    return get_option($strOptionName, $default);
+  }
+
+  private function ai1ecf_save_option_field($strField, $mixOptionValue) {
+    $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField;
+    update_option($strOptionName, $mixOptionValue, true);
+  }
+
   private function ai1ecf_get_location_field($strField) {
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField;
     $aOptionValue = get_option($strOptionName, array());
@@ -877,6 +1068,58 @@ class AI1EC_Fixes {
         $this->ai1ecf_parse_and_add_featured_image( $oPost );
       }
     }
+  }
+  
+  public function ai1ecf_send_newsletter_reminder() {
+    // TODO Check for day and whether the reminder has already been sent for the given day //
+    $aOptions = $this->ai1ecf_get_option_field("reminder");
+    foreach (array('time-hour', 'time-minute','day') as $key) {
+      if (!isset($aOptions[$key]) || empty($aOptions[$key])) {
+        return;
+      }
+    }
+
+    if (intval($aOptions["day"]) !== date("N")) {
+      // Not the right day //
+      return;
+    }
+    $strLastSentDate = $this->ai1ecf_get_option_field("reminder_last_sent_date", "");
+    $strToday = date("Ymd");
+    if (!empty($strLastSentDate) && $strLastSentDate == $strToday) {
+      // Today's reminder has already been sent //
+      return;
+    }
+    $iTimeNow = date("G")*100+date("i");
+    $iTimeScheduled = $aOptions['time-hour']*100+$aOptions['time-minute'];
+    if ($iTimeNow < $iTimeScheduled) {
+      return;
+    }
+    
+    // send email
+    $aArgs = array(
+      'blog_id' => get_current_blog_id(),
+      'include' => $aOptions['reminder_users'],
+    );
+    $aUsers = get_users( $aArgs );
+    if (isset($aOptions['email-addresses']) && !empty($aOptions['email-addresses'])) {
+      $aEmails = explode( ',', $aOptions['email-addresses']);
+    } else {
+      $aEmails = array();
+    }
+    foreach ($aUsers as $objUser) {
+      $aEmails[] = $objUser->user_email;
+    }
+    if (empty($aEmails)) {
+      return;
+    }
+    
+    $bRes = wp_mail( $aEmails, $aOptions['email-subject'], $aOptions['reminder_email-body-wp-editor']);
+    if ($bRes) {
+      $this->ai1ecf_save_option_field( "reminder", $strToday );
+    }
+  }
+  public function ai1ecf_add_missing_categories_and_tags() {
+    // TODO
   }
   
   public function ai1ecf_action_pre_save_event( $eventObject, $update ) {
