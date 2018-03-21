@@ -4,7 +4,7 @@
  * Description: All-in-One Event Calendar Fixes
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 0.1
+ * Version: 1.1.0
  */
 
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
