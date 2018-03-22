@@ -22,15 +22,24 @@ h2.nav-tab-wrapper.hidden{
 /*   display: none; */
 }
 
-.ai1ecf-option-row {
+.ai1ecf-option-header-row {
   width: calc(100% - 11px);
   clear: both;
-  border-bottom: 1px solid #ccc;
+  border-top: 1px solid #ccc;
   padding: 5px;
   overflow: auto;
 }
-.ai1ecf-option-row:last-of-type {
-  border-bottom: none;
+.ai1ecf-option-row {
+  width: calc(100% - 11px);
+  clear: both;
+  border-top: 1px dashed #ccc;
+  padding: 5px;
+  overflow: auto;
+}
+.ai1ecf-option-row:first-of-type,
+.ai1ecf-option-header-row:first-of-type
+{
+  border-top: none;
 }
 .ai1ecf-option-label {
   font-weight: bold;

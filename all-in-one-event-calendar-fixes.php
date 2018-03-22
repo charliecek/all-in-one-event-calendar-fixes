@@ -4,15 +4,15 @@
  * Description: All-in-One Event Calendar Fixes
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 
-define( "AI1ECF_VERSION", "1.1.0" );
+define( "AI1ECF_VERSION", "1.2.0" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
 define( "AI1ECF_OPTION_LOC_PREFIX", "ai1ecf_location_" );
-define( "AI1ECF_OPTION_NONLOC_FIELDS", "reminder,cats-tabs");
+define( "AI1ECF_OPTION_NONLOC_FIELDS", "reminder,cats-tags");
 define( "AI1ECF_OPTION_NONLOC_PREFIX", "ai1ecf_nonlocation_option_" );
 define( "AI1ECF_OPTION_PREFIX", "ai1ecf_" );
 define( "AI1ECF_PATH_TO_TEMPLATES", __DIR__ . "/view/" );
@@ -31,6 +31,7 @@ class AI1EC_Fixes {
   private $bLocationReplacementEnabled  = false;
   private $strOptionsPageSlug           = 'ai1ecf_ai1ec_fixes';
   private $aEventUpdateSkipFields       = array();
+  private $aTerms                       = array();
   
   /**
     * Constructor
@@ -66,10 +67,14 @@ class AI1EC_Fixes {
                                                 'skip-event-update-from-feed-title', 'skip-event-update-from-feed-desc', 'skip-event-update-from-feed-checkboxes'),
       'skip-event-update-checkboxes'  => array( 'skip-event-update-checkbox-key', 'skip-event-update-checkbox-name', 'skip-event-update-checkbox-checked' ),
       'reminder'                      => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'label-email-body', 'label-time', 'label-day',
-                                                'users', 'reminder_users', 'email-addresses', 'email-subject', 'email-body-wp-editor', 'reminder_email-body-wp-editor', 'time-minute', 'time-hour', 'day',
+                                                'reminder-users', 'reminder_users', 'reminder_email-addresses', 'reminder_email-subject', 'reminder_email-body-wp-editor', 'reminder_email-body-wp-editor', 'reminder_time-minute', 'reminder_time-hour', 'reminder_day',
                                                 'options-weekdays', 'options-hour', 'options-minute' ),
+      'cats-tags'                     => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings',
+                                                'label-category-keywords', 'label-tag-keywords', 'label-category-name', 'label-tag-name', 'label-additional-term-keywords',
+                                                'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords' ),
       // ''  => array(  ),
     );
+
     $this->aPlaceholderValues = array(
       'header-venue'                        => __( "Venue", "ai1ecf" ),
       'header-location_replacement'         => __( "Location replacement", "ai1ecf" ),
@@ -81,7 +86,7 @@ class AI1EC_Fixes {
       'header-info-address'                 => __( "These rules affect hover pop-ins (calendar, agenda widget) and the SRD newsletter theme. <strong><em>They do not affect</em></strong> single event pages and excerpts.", "ai1ecf" ),
       'header-info-contact_name'            => __( "These rules affect hover pop-ins (calendar, agenda widget), single event pages, excerpts and the SRD newsletter theme.", "ai1ecf" ),
       'header-reminder'                     => __( "Newsletter reminder", "ai1ecf" ),
-      'header-cats-tabs'                    => __( "Automatic categories and tabs", "ai1ecf" ),
+      'header-cats-tags'                    => __( "Automatic categories and tabs", "ai1ecf" ),
       'button-value'                        => __( "Save", "ai1ecf" ),
       'location-replacement-enabled-label'  => __( "Enable location replacement rules?", "ai1ecf" ),
       'ai1ecf-metabox-title'                => __( "All-in-One Event Calendar Fixes", "ai1ecf" ),
@@ -105,6 +110,14 @@ class AI1EC_Fixes {
       'label-day-6'                         => __( "Saturday", "ai1ecf" ),
       'label-day-7'                         => __( "Sunday", "ai1ecf" ),
       'label-time'                          => __( "Reminder time", "ai1ecf" ),
+      'header-general-settings'             => __( "General settings", "ai1ecf" ),
+      'header-category-settings'            => __( "Category settings", "ai1ecf" ),
+      'header-tag-settings'                 => __( "Tag settings", "ai1ecf" ),
+      'label-category-keywords'             => __( "Category keywords", "ai1ecf" ),
+      'label-tag-keywords'                  => __( "Tag keywords", "ai1ecf" ),
+      'label-default-term-keywords'         => __( "Default keywords", "ai1ecf" ),
+      'label-additional-term-keywords'      => __( "Additional keywords (comma-separated)", "ai1ecf" ),
+      'cats-tags-default-subject'           => __( "Automatic category and tag assignment report", "ai1ecf" ),
       // ''  => __( "", "ai1ecf" ),
     );
 
@@ -252,7 +265,38 @@ class AI1EC_Fixes {
     return ob_get_clean();
   }
   
+  private function ai1ecf_maybe_set_ai1ec_terms() {
+    if (!empty($this->aTerms)) {
+      return;
+    }
+    $this->aTerms = array(
+      'category' => get_terms("events_categories"),
+      'tag' => get_terms("events_tags"),
+    );
+  }
+  
+  private function ai1ecf_maybe_set_ai1ec_term_placeholders() {
+    $this->ai1ecf_maybe_set_ai1ec_terms();
+    
+    foreach ( $this->aTerms as $strTermType => $aTermsLoc ) {
+      foreach ( $aTermsLoc as $objTerm ) {
+        $aAttrNames = array(
+          'additional' => 'cats-tags_term-additional-keywords-'.$strTermType.'-'.$objTerm->slug,
+          'default' => 'cats-tags_term-default-keywords-'.$strTermType.'-'.$objTerm->slug
+        );
+        foreach ($aAttrNames as $strAttrName) {
+          if (!in_array($strAttrName, $this->aFieldToPlaceholders['cats-tags'])) {
+            $this->aFieldToPlaceholders['cats-tags'][] = $strAttrName;
+          }
+        }
+      }
+    }
+  }
+  
   public function ai1ecf_options_page() {
+    $this->ai1ecf_maybe_set_ai1ec_term_placeholders();
+    
+    // TODO: add default category to use for up-to-1-day events and more-than-1-day-events
     echo "<h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
 
     if (isset($_POST['save-ai1ecf-options'])) {
@@ -264,8 +308,15 @@ class AI1EC_Fixes {
     $strTableTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-table.html");
     $strTabTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-tab.html");
     $strDivTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div.html");
+    $strUserTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-option-user.html");
+    $strTermKeywordsTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-term-keywords.html");
+    $strCheckboxTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-checkbox.html");
     $aFieldToPlaceholders = $this->aFieldToPlaceholders;
     $aPlaceholderValues = $this->aPlaceholderValues;
+    $aArgs = array(
+      'blog_id' => get_current_blog_id(),
+    );
+    $aUsers = get_users( $aArgs );
     
     // Reminder, category + tag tabs //
     $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
@@ -275,19 +326,42 @@ class AI1EC_Fixes {
       $strDivTemplateLoc = $strDivTemplate;
       $strBodyTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body_".$strField.".html");
       $aOptionValues = $this->ai1ecf_get_option_field($strField);
+      
+      // Check for options saved without prefix and fix them //
+      $bSave = false;
+      foreach ($aOptionValues as $key => $value) {
+        if (strpos($key, $strField."_") === false) {
+          $bSave = true;
+          $aOptionValues[$strField."_".$key] = $value;
+          unset($aOptionValues[$key]);
+        }
+      }
+      if ($bSave) {
+        $this->ai1ecf_save_option_field( $strField, $aOptionValues );
+      }
+      
+      if ($strField == "cats-tags") {
+        // echo "<pre>".var_export($aOptionValues, true)."</pre>";
+        // echo "<pre>".var_export($this->aTerms, true)."</pre>";
+      }
       // echo "<pre>".var_export($aOptionValues, true)."</pre>";
       foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
-        $strCustomPlaceholder = $strField."_".$strPlaceholder;
         if (!isset($aPlaceholderValues[$strPlaceholder])) {
-          $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
-          if ($strPlaceholder == "email-body-wp-editor") {
-            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+          if ($strPlaceholder == $strField."_email-subject") {
+            $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : $aPlaceholderValues["cats-tags-default-subject"];
+            // $mixOptionValue = (!empty($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : $aPlaceholderValues["cats-tags-default-subject"];
+          } else {
+            $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
+          }
+          
+          if ($strPlaceholder == $strField."_email-body-wp-editor") {
+            $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
             $aSettings = array(
               'media_buttons' => false,
             );
-            $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_get_wp_editor( $mixOptionValue, $strCustomPlaceholder, $aSettings );
+            $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_get_wp_editor( $mixOptionValue, $strPlaceholder, $aSettings );
           } elseif ($strPlaceholder == "options-weekdays") {
-            $strCustomPlaceholder = 'day';
+            $strCustomPlaceholder = $strField.'_day';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $strDayOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
@@ -305,7 +379,7 @@ class AI1EC_Fixes {
               );
             }
           } elseif ($strPlaceholder == "options-hour") {
-            $strCustomPlaceholder = 'time-hour';
+            $strCustomPlaceholder = $strField.'_time-hour';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $strHourOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
@@ -323,7 +397,7 @@ class AI1EC_Fixes {
               );
             }
           } elseif ($strPlaceholder == "options-minute") {
-            $strCustomPlaceholder = 'time-minute';
+            $strCustomPlaceholder = $strField.'_time-minute';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $strMinuteOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
@@ -340,16 +414,12 @@ class AI1EC_Fixes {
                 $strMinuteOptionTemplate
               );
             }
-          } elseif ($strPlaceholder == "users") {
-            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+          } elseif ($strPlaceholder == $strField."-users") {
+            $strCustomPlaceholder = $strField.'_users';
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : array();
             if (empty($mixOptionValue)) {
               $mixOptionValue = array();
             }
-            $aArgs = array(
-              'blog_id' => get_current_blog_id(),
-            );
-            $aUsers = get_users( $aArgs );
-            $strUserTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body_".$strField."_user.html");
             foreach ($aUsers as $objUser) {
               if (in_array($objUser->ID, $mixOptionValue)) {
                 $strChecked = 'checked="checked"';
@@ -360,6 +430,40 @@ class AI1EC_Fixes {
                 array( '%%prefix%%', '%%user_id%%', '%%email%%', '%%name%%', '%%checked%%' ),
                 array( $strField.'_', $objUser->ID, esc_html( $objUser->user_email ), esc_html( $objUser->display_name ), $strChecked ),
                 $strUserTemplate
+              );
+            }
+          } elseif ($strPlaceholder == "category-keywords" || $strPlaceholder == "tag-keywords" ) {
+            $strTermType = str_replace("-keywords", "", $strPlaceholder);
+            
+            foreach ($this->aTerms[$strTermType] as $objTerm) {
+              $strDefaultTermKeywordCheckboxesLoc = "";
+              $strAttrName = $strField."_term-default-keywords-".$strTermType."-".$objTerm->slug;
+              $aSelectedDefaultTermKeywords = (isset($aOptionValues[$strAttrName])) ? $aOptionValues[$strAttrName] : array();
+              foreach ( array('slug', 'name', 'description' ) as $attr ) {
+                if (!isset($objTerm->$attr) || empty($objTerm->$attr)) {
+                  continue;
+                }
+                if ($attr !== "slug" && $objTerm->$attr == $objTerm->slug ) {
+                  continue;
+                }
+                if (in_array($objTerm->$attr, $aSelectedDefaultTermKeywords)) {
+                  $strChecked = 'checked="checked"';
+                } else {
+                  $strChecked = "";
+                }
+                $strDefaultTermKeywordCheckboxesLoc .= str_replace(
+                  array( '%%attr_id%%', '%%attr_name%%', '%%checked%%', '%%value%%', '%%label%%' ),
+                  array( $strField."_term-default-keywords-".$strTermType."-".$objTerm->slug.'-'.$attr, $strField."_term-default-keywords-".$strTermType."-".$objTerm->slug, $strChecked, $objTerm->$attr, $objTerm->$attr ),
+                  $strCheckboxTemplate
+                );
+              }
+            
+              $strTermAttrName = $strField."_term-additional-keywords-".$strTermType."-".$objTerm->slug;
+              $strAdditionalTermKeywordsValue = (isset($aOptionValues[$strTermAttrName])) ? $aOptionValues[$strTermAttrName] : "";
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%prefix%%', '%%term-id%%', '%%term_type%%', '%%label-term-name%%', '%%label-additional-term-keywords%%', '%%label-default-term-keywords%%', '%%default-term-keyword-checkboxes%%', '%%value%%' ),
+                array( $strField.'_', $objTerm->slug, $strTermType, $objTerm->name, $aPlaceholderValues['label-additional-term-keywords'], $aPlaceholderValues['label-default-term-keywords'], $strDefaultTermKeywordCheckboxesLoc, $strAdditionalTermKeywordsValue ),
+                $strTermKeywordsTemplate
               );
             }
           } else {
@@ -487,6 +591,7 @@ class AI1EC_Fixes {
   
   private function ai1ecf_save_option_page_options($aPost) {
 
+//     echo "<pre>".var_export($aPost, true)."</pre>";
     $aFieldsLoc = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
     
@@ -506,6 +611,8 @@ class AI1EC_Fixes {
         if (!isset($aPlaceholderValues[$strPlaceholder])) {
           if (isset($aPost[$strPlaceholder])) {
             $aFieldOptionValues[$strPlaceholder] = $aPost[$strPlaceholder];
+          } elseif (isset($aFieldOptionValues[$strPlaceholder])) {
+            unset( $aFieldOptionValues[$strPlaceholder] );
           }
         }
       }
@@ -1162,7 +1269,10 @@ class AI1EC_Fixes {
   }
 
   public function ai1ecf_add_missing_categories_and_tags() {
-    // TODO
+    $this->ai1ecf_maybe_set_ai1ec_terms();
+    // $aOptionValues = $this->ai1ecf_get_option_field( "cats-tags" );
+    // TODO: Go through $this->aTerms => get the keywords to use for each tag/category
+    // TODO: Go through all events with no category assigned
   }
 
   public function ai1ecf_action_pre_save_event( $eventObject, $update ) {
