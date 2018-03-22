@@ -33,6 +33,7 @@ h2.nav-tab-wrapper.hidden{
   border-bottom: none;
 }
 .ai1ecf-option-label {
+  font-weight: bold;
   width: 29%;
   float: left;
 }
