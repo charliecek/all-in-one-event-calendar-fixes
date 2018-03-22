@@ -1,5 +1,6 @@
 <div class="ai1ecf-option-row">
-  <span class="ai1ecf-option-label">%%label-users%%</label>%%users%%
+  <span class="ai1ecf-option-label">%%label-users%%</span>
+  <div class="ai1ecf-option-value">%%users%%</div>
 </div>
 <div class="ai1ecf-option-row">
   <label for="email-addresses" class="ai1ecf-option-label">%%label-email-addresses%%</label>
@@ -12,8 +13,10 @@
   </select>
 </div>
 <div class="ai1ecf-option-row">
-  <span class="ai1ecf-option-label">%%label-time%%</label>
-  <select id="time-hour" name="time-hour" class="ai1ecf-option-value">%%options-hour%%</select> : <select id="time-minute" name="time-minute" class="ai1ecf-option-value">%%options-minute%%</select>
+  <span class="ai1ecf-option-label">%%label-time%%</span>
+  <span class="ai1ecf-option-value">
+    <select id="time-hour" name="time-hour" class="ai1ecf-option-value-time-hour">%%options-hour%%</select> : <select id="time-minute" name="time-minute" class="ai1ecf-option-value-time-minute">%%options-minute%%</select>
+  </span>
 </div>
 <div class="ai1ecf-option-row">
   <label for="email-subject" class="ai1ecf-option-label">%%label-email-subject%%</label>
@@ -21,5 +24,7 @@
 </div>
 <div class="ai1ecf-option-row">
   <span class="ai1ecf-option-label full-width">%%label-email-body%%</span>
-  %%email-body-wp-editor%%
+  <div class="ai1ecf-option-value">
+    %%email-body-wp-editor%%
+  </div>
 </div>

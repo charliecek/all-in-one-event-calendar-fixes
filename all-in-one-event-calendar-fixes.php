@@ -7,12 +7,14 @@
  * Version: 1.1.0
  */
 
+define( "AI1ECF_VERSION", "1.1.0" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
 define( "AI1ECF_OPTION_LOC_PREFIX", "ai1ecf_location_" );
 define( "AI1ECF_OPTION_NONLOC_FIELDS", "reminder,cats-tabs");
 define( "AI1ECF_OPTION_NONLOC_PREFIX", "ai1ecf_nonlocation_option_" );
+define( "AI1ECF_OPTION_PREFIX", "ai1ecf_" );
 define( "AI1ECF_PATH_TO_TEMPLATES", __DIR__ . "/view/" );
 define( "AI1ECF_LOCATION_OVERRIDE_POSTMETA_ID", "ai1ecf-location-override" );
 define( "AI1ECF_SKIP_EVENT_UPDATE_FROM_FEED_POSTMETA_ID", "ai1ecf-location-skip-event-update-from-feed" );
@@ -120,9 +122,18 @@ class AI1EC_Fixes {
       'place'   => array( 'venue', 'country', 'address', 'city', 'province', 'postal_code' ),
       'contact' => array( 'contact_name', 'contact_phone', 'contact_email', 'contact_url', 'ical_organizer', 'ical_contact')
     );
+
+    $bCronsAdded = $this->ai1ecf_get_option_field("crons_added", false);
+    if (!$bCronsAdded) {
+      $this->ai1ecf_maybe_add_crons();
+    }
   }
 
   public static function ai1ecf_activate() {
+    $this->ai1ecf_maybe_add_crons();
+  }
+
+  private function ai1ecf_maybe_add_crons() {
     if ( !wp_next_scheduled( 'ai1ecf_add_missing_featured_images' ) ) {
       wp_schedule_event( time(), 'hourly', 'ai1ecf_add_missing_featured_images');
     }
@@ -132,9 +143,14 @@ class AI1EC_Fixes {
     if ( !wp_next_scheduled( 'ai1ecf_add_missing_categories_and_tags' ) ) {
       wp_schedule_event( time(), 'twicedaily', 'ai1ecf_add_missing_categories_and_tags');
     }
+    $this->ai1ecf_save_option_field("crons_added", true);
   }
   
   public static function ai1ecf_deactivate() {
+    $this->ai1ecf_remove_crons();
+  }
+
+  private function ai1ecf_remove_crons() {
     wp_clear_scheduled_hook('ai1ecf_add_missing_featured_images');
     wp_clear_scheduled_hook('ai1ecf_send_newsletter_reminder');
     wp_clear_scheduled_hook('ai1ecf_add_missing_categories_and_tags');
@@ -220,9 +236,9 @@ class AI1EC_Fixes {
       return;
     }
     
-    wp_enqueue_style( 'ai1ecf-fa', "https://opensource.keycdn.com/fontawesome/4.7.0/font-awesome.min.css" );
-    wp_enqueue_style( 'ai1ecf-admin-style', plugins_url('css/admin-style.css', __FILE__) );
-    wp_enqueue_script( 'ai1ecf-admin-js', plugins_url('js/admin-js.js', __FILE__) );
+    wp_enqueue_style( 'ai1ecf-fa', "https://opensource.keycdn.com/fontawesome/4.7.0/font-awesome.min.css", array(), "4.7.0" );
+    wp_enqueue_style( 'ai1ecf-admin-style', plugins_url('css/admin-style.css', __FILE__), array(), AI1ECF_VERSION );
+    wp_enqueue_script( 'ai1ecf-admin-js', plugins_url('js/admin-js.js', __FILE__), array(), AI1ECF_VERSION );
   }
   
   private function ai1ecf_get_field_value_id($strValue) {
@@ -360,9 +376,11 @@ class AI1EC_Fixes {
         $strDivTemplateLoc
       );
 
-      foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
-        $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
-        $strDivTemplateLoc = str_replace('%%'.$strPlaceholder.'%%', $strPlaceholderValue, $strDivTemplateLoc);
+      if (!empty($aFieldToPlaceholders[$strField])) {
+        foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
+          $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
+          $strDivTemplateLoc = str_replace('%%'.$strPlaceholder.'%%', $strPlaceholderValue, $strDivTemplateLoc);
+        }
       }
 
       // Add replaced DIV template to tab content template //
@@ -486,7 +504,7 @@ class AI1EC_Fixes {
       $aFieldOptionValues = $this->ai1ecf_get_option_field($strField);
       foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
         if (!isset($aPlaceholderValues[$strPlaceholder])) {
-          if (isset($aPost[$strPlaceholder]) && !empty($aPost[$strPlaceholder])) {
+          if (isset($aPost[$strPlaceholder])) {
             $aFieldOptionValues[$strPlaceholder] = $aPost[$strPlaceholder];
           }
         }
@@ -559,12 +577,12 @@ class AI1EC_Fixes {
   }
   
   private function ai1ecf_get_option_field($strField, $default = array()) {
-    $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField;
+    $strOptionName = AI1ECF_OPTION_PREFIX . $strField;
     return get_option($strOptionName, $default);
   }
 
   private function ai1ecf_save_option_field($strField, $mixOptionValue) {
-    $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField;
+    $strOptionName = AI1ECF_OPTION_PREFIX . $strField;
     update_option($strOptionName, $mixOptionValue, true);
   }
 
@@ -1072,8 +1090,9 @@ class AI1EC_Fixes {
   
   public function ai1ecf_send_newsletter_reminder() {
     $aOptions = $this->ai1ecf_get_option_field("reminder");
-    foreach (array('time-hour', 'time-minute','day') as $key) {
-      if (!isset($aOptions[$key]) || empty($aOptions[$key])) {
+    foreach (array('time-hour', 'time-minute', 'day') as $key) {
+      if (!isset($aOptions[$key])) {
+        $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-1.kk');
         return;
       }
     }
@@ -1082,6 +1101,7 @@ class AI1EC_Fixes {
     $strToday = date("Ymd");
     if (!empty($strLastSentDate) && $strLastSentDate == $strToday) {
       // Today's reminder has already been sent //
+      // $this->ai1ecf_add_debug_log(var_export($strLastSentDate, true), false, 'debug-send-notifications-err-3.kk');
       return;
     }
     if (intval($aOptions["day"]) !== date("N")) {
@@ -1092,9 +1112,12 @@ class AI1EC_Fixes {
         if ($iToday - $iLastSentDate > 7) {
           // continue with sending - the last reminder was sent more than a week ago! //
         } else {
+          // OK: the last reminder was sent less than a week ago //
           return;
         }
       } else {
+        // No LastSentDate: let's wait for the next time of sending //
+        // $this->ai1ecf_add_debug_log(var_export(date("N"), true), false, 'debug-send-notifications-err-2.kk');
         return;
       }
     } else {
@@ -1102,10 +1125,12 @@ class AI1EC_Fixes {
       $iTimeNow = date("G")*100+date("i");
       $iTimeScheduled = $aOptions['time-hour']*100+$aOptions['time-minute'];
       if ($iTimeNow < $iTimeScheduled) {
+        // The time has not yet arrived //
+        // $this->ai1ecf_add_debug_log(var_export(array($iTimeNow,$iTimeScheduled), true), false, 'debug-send-notifications-err-4.kk');
         return;
       }
     }
-    
+
     // send email
     $aArgs = array(
       'blog_id' => get_current_blog_id(),
@@ -1121,18 +1146,25 @@ class AI1EC_Fixes {
       $aEmails[] = $objUser->user_email;
     }
     if (empty($aEmails)) {
+      $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-5.kk');
       return;
     }
-    
-    $bRes = wp_mail( $aEmails, $aOptions['email-subject'], $aOptions['reminder_email-body-wp-editor']);
+
+    $aHeaders = array('Content-Type: text/html; charset=UTF-8');
+    $bRes = wp_mail( $aEmails, $aOptions['email-subject'], $aOptions['reminder_email-body-wp-editor'], $aHeaders);
     if ($bRes) {
-      $this->ai1ecf_save_option_field( "reminder", $strToday );
+      $this->ai1ecf_save_option_field( "reminder_last_sent_date", $strToday );
+    } else {
+      $this->ai1ecf_add_debug_log(var_export($bRes, true), false, 'debug-send-notifications-res.kk');
+      $this->ai1ecf_add_debug_log(var_export($aEmails, true), false, 'debug-send-notifications-emails.kk');
+      $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-options.kk');
     }
   }
+
   public function ai1ecf_add_missing_categories_and_tags() {
     // TODO
   }
-  
+
   public function ai1ecf_action_pre_save_event( $eventObject, $update ) {
     if (isset($GLOBALS['ai1ecf_event_save']) && true === $GLOBALS['ai1ecf_event_save'] && isset($GLOBALS['ai1ecf_event_fname'])) {
       $columns    = $eventObject->prepare_store_entity();

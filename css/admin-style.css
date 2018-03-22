@@ -21,3 +21,25 @@ input.button.hidden{
 h2.nav-tab-wrapper.hidden{
 /*   display: none; */
 }
+
+.ai1ecf-option-row {
+  width: calc(100% - 11px);
+  clear: both;
+  border-bottom: 1px solid #ccc;
+  padding: 5px;
+  overflow: auto;
+}
+.ai1ecf-option-row:last-of-type {
+  border-bottom: none;
+}
+.ai1ecf-option-label {
+  width: 29%;
+  float: left;
+}
+.ai1ecf-option-value {
+  width: 70%;
+  float: right;
+}
+.ai1ecf-option-clear-both{
+    clear: both;
+}
