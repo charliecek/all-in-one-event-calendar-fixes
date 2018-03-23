@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.1.0
+ * Version: 1.1.1
  */
 
-define( "AI1ECF_VERSION", "1.1.0" );
+define( "AI1ECF_VERSION", "1.1.1" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
