@@ -1104,7 +1104,7 @@ class AI1EC_Fixes {
       // $this->ai1ecf_add_debug_log(var_export($strLastSentDate, true), false, 'debug-send-notifications-err-3.kk');
       return;
     }
-    if (intval($aOptions["day"]) !== date("N")) {
+    if (intval($aOptions["day"]) !== intval(date("N"))) {
       // Not the right day //
       if (!empty($strLastSentDate)) {
         $iLastSentDate = intval($strLastSentDate);
