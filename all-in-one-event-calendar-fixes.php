@@ -32,6 +32,10 @@ class AI1EC_Fixes {
   private $strOptionsPageSlug           = 'ai1ecf_ai1ec_fixes';
   private $aEventUpdateSkipFields       = array();
   private $aTerms                       = array();
+  private $strAi1ecPostType             = 'ai1ec_event';
+  private $strAi1ecCategoryTaxonomy     = 'events_categories';
+  private $strAi1ecTagTaxonomy          = 'events_tags';
+  private $strOptionValueNone           = '(0)';
   
   /**
     * Constructor
@@ -44,10 +48,10 @@ class AI1EC_Fixes {
     add_action( 'init', array( $this, 'ai1ecf_translations_load') );
     add_action( 'ai1ec_pre_save_event', array( $this, 'ai1ecf_action_pre_save_event' ), 10, 2 );
     add_action( 'admin_enqueue_scripts', array( $this, 'ai1ecf_action_admin_enqueue_scripts' ) );
-    add_action( 'add_meta_boxes_ai1ec_event', array( $this, 'ai1ecf_event_metaboxes' ) );
-    add_action( 'save_post_ai1ec_event', array( $this, 'ai1ecf_event_save_post' ) );
+    add_action( 'add_meta_boxes_'.$this->strAi1ecPostType, array( $this, 'ai1ecf_event_metaboxes' ) );
+    add_action( 'save_post_'.$this->strAi1ecPostType, array( $this, 'ai1ecf_event_save_post' ) );
     add_action( 'ai1ec_ics_before_import', array( $this, 'ai1ecf_action_ics_before_import' ) );
-//     add_action( 'ai1ec_event_saved', array( $this, 'ai1ecf_action_event_saved' ), 10, 3 );
+//     add_action( $this->strAi1ecPostType.'_saved', array( $this, 'ai1ecf_action_event_saved' ), 10, 3 );
 
     add_action( 'admin_menu', array( $this, "ai1ecf_add_options_page" ) );
   
@@ -69,9 +73,13 @@ class AI1EC_Fixes {
       'reminder'                      => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'label-email-body', 'label-time', 'label-day',
                                                 'reminder-users', 'reminder_users', 'reminder_email-addresses', 'reminder_email-subject', 'reminder_email-body-wp-editor', 'reminder_email-body-wp-editor', 'reminder_time-minute', 'reminder_time-hour', 'reminder_day',
                                                 'options-weekdays', 'options-hour', 'options-minute' ),
-      'cats-tags'                     => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings',
-                                                'label-category-keywords', 'label-tag-keywords', 'label-category-name', 'label-tag-name', 'label-additional-term-keywords',
-                                                'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords' ),
+      'cats-tags'                     => array( 'label-cats-tags-users', 'label-cats-tags-email-addresses', 'label-cats-tags-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings', 'header-cats-tags_preview',
+                                                'label-category-keywords', 'label-tag-keywords', 'label-category-name', 'label-tag-name', 'label-additional-term-keywords', 'label-festival-category', 'label-party-category',
+                                                'label-single-category', 'label-check', 'label-_none_', 'label-enable',
+                                                'info-festival-category', 'info-party-category', 'info-single-category', 'info-cats-tags-enable',
+                                                'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords', 'cats-tags_preview',
+                                                'options-festival-category', 'options-party-category', 'cats-tags_festival-category', 'cats-tags_party-category', 'cats-tags_single-category',
+                                                'cats-tags_single-category-checked', 'cats-tags_enable', 'cats-tags_enable-checked' ),
       // ''  => array(  ),
     );
 
@@ -87,6 +95,7 @@ class AI1EC_Fixes {
       'header-info-contact_name'            => __( "These rules affect hover pop-ins (calendar, agenda widget), single event pages, excerpts and the SRD newsletter theme.", "ai1ecf" ),
       'header-reminder'                     => __( "Newsletter reminder", "ai1ecf" ),
       'header-cats-tags'                    => __( "Automatic categories and tabs", "ai1ecf" ),
+      'header-cats-tags_preview'            => __( "Email preview", "ai1ecf" ),
       'button-value'                        => __( "Save", "ai1ecf" ),
       'location-replacement-enabled-label'  => __( "Enable location replacement rules?", "ai1ecf" ),
       'ai1ecf-metabox-title'                => __( "All-in-One Event Calendar Fixes", "ai1ecf" ),
@@ -101,6 +110,9 @@ class AI1EC_Fixes {
       'label-email-addresses'               => __( "Send reminders to these email addresses as well: ", "ai1ecf" ),
       'label-email-subject'                 => __( "Email reminder subject: ", "ai1ecf" ),
       'label-email-body'                    => __( "Email reminder body: ", "ai1ecf" ),
+      'label-cats-tags-users'               => __( "Send report to these users: ", "ai1ecf" ),
+      'label-cats-tags-email-addresses'     => __( "Send report to these email addresses as well: ", "ai1ecf" ),
+      'label-cats-tags-email-subject'       => __( "Email report subject: ", "ai1ecf" ),
       'label-day'                           => __( "Reminder day", "ai1ecf" ),
       'label-day-1'                         => __( "Monday", "ai1ecf" ),
       'label-day-2'                         => __( "Tuesday", "ai1ecf" ),
@@ -113,11 +125,26 @@ class AI1EC_Fixes {
       'header-general-settings'             => __( "General settings", "ai1ecf" ),
       'header-category-settings'            => __( "Category settings", "ai1ecf" ),
       'header-tag-settings'                 => __( "Tag settings", "ai1ecf" ),
+      'header-cats-tags-assigned-ok'        => __( "Events with successful automatic category and/or tag assignment", "ai1ecf" ),
+      'header-cats-tags-category1tag0'      => __( "Events with no tags (with categories)", "ai1ecf" ),
+      'header-cats-tags-category0tag1'      => __( "Events with no categories (with tags)", "ai1ecf" ),
+      'header-cats-tags-category0tag0'      => __( "Events with no categories, no tags", "ai1ecf" ),
       'label-category-keywords'             => __( "Category keywords", "ai1ecf" ),
       'label-tag-keywords'                  => __( "Tag keywords", "ai1ecf" ),
       'label-default-term-keywords'         => __( "Default keywords", "ai1ecf" ),
       'label-additional-term-keywords'      => __( "Additional keywords (comma-separated)", "ai1ecf" ),
+      'label-festival-category'             => __( "Category with festivals", "ai1ecf" ),
+      'label-party-category'                => __( "Category with parties", "ai1ecf" ),
+      'label-single-category'               => __( "Single category matching?", "ai1ecf" ),
+      'label-check'                         => __( "check", "ai1ecf" ),
+      'label-_none_'                        => __( "(none)", "ai1ecf" ),
+      'label-enable'                        => __( "Enable", "ai1ecf" ),
+      'info-festival-category'              => __( "This category is selected if the event is longer than one day", "ai1ecf" ),
+      'info-party-category'                 => __( "This category is selected if the event happens between 20:00 and 5:00 (next day)", "ai1ecf" ),
+      'info-single-category'                => __( "Stop after having matched first category.", "ai1ecf" ),
+      'info-cats-tags-enable'               => __( "Enable automatic assignment of categories and tags and report emailing", "ai1ecf" ),
       'cats-tags-default-subject'           => __( "Automatic category and tag assignment report", "ai1ecf" ),
+      'no-categories-without-terms'         => __( "There are no events without categories or tags", "ai1ecf" ),
       // ''  => __( "", "ai1ecf" ),
     );
 
@@ -179,7 +206,7 @@ class AI1EC_Fixes {
       'ai1ecf_event_location_override_metabox',
       $this->aPlaceholderValues['ai1ecf-metabox-title'],
       array( $this, 'ai1ecf_event_location_override_metabox_html' ),
-      'ai1ec_event',
+      $this->strAi1ecPostType,
       'side',
       'high'
     );
@@ -269,9 +296,13 @@ class AI1EC_Fixes {
     if (!empty($this->aTerms)) {
       return;
     }
+    $aArgs = array(
+      'hide_empty' => false,
+      'orderby' => 'term_id',
+    );
     $this->aTerms = array(
-      'category' => get_terms("events_categories"),
-      'tag' => get_terms("events_tags"),
+      'category' => get_terms( $this->strAi1ecCategoryTaxonomy, $aArgs ),
+      'tag' => get_terms( $this->strAi1ecTagTaxonomy, $aArgs ),
     );
   }
   
@@ -294,9 +325,9 @@ class AI1EC_Fixes {
   }
   
   public function ai1ecf_options_page() {
+    // Set up term replacement placeholders //
     $this->ai1ecf_maybe_set_ai1ec_term_placeholders();
     
-    // TODO: add default category to use for up-to-1-day events and more-than-1-day-events
     echo "<h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
 
     if (isset($_POST['save-ai1ecf-options'])) {
@@ -311,6 +342,7 @@ class AI1EC_Fixes {
     $strUserTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-option-user.html");
     $strTermKeywordsTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-term-keywords.html");
     $strCheckboxTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body-checkbox.html");
+    $strOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
     $aFieldToPlaceholders = $this->aFieldToPlaceholders;
     $aPlaceholderValues = $this->aPlaceholderValues;
     $aArgs = array(
@@ -340,11 +372,12 @@ class AI1EC_Fixes {
         $this->ai1ecf_save_option_field( $strField, $aOptionValues );
       }
       
+      /* // DEBUG //
       if ($strField == "cats-tags") {
         // echo "<pre>".var_export($aOptionValues, true)."</pre>";
         // echo "<pre>".var_export($this->aTerms, true)."</pre>";
       }
-      // echo "<pre>".var_export($aOptionValues, true)."</pre>";
+      // */
       foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
         if (!isset($aPlaceholderValues[$strPlaceholder])) {
           if ($strPlaceholder == $strField."_email-subject") {
@@ -360,10 +393,27 @@ class AI1EC_Fixes {
               'media_buttons' => false,
             );
             $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_get_wp_editor( $mixOptionValue, $strPlaceholder, $aSettings );
+          } elseif ($strPlaceholder == "cats-tags_single-category" ) {
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+            $strCheckboxPlaceholder = "cats-tags_single-category-checked";
+            if ($mixOptionValue == "1") {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
+            } else {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = "";
+            }
+          } elseif ($strPlaceholder == "cats-tags_enable") {
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+            $strCheckboxPlaceholder = "cats-tags_enable-checked";
+            if ($mixOptionValue == "1") {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
+            } else {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = "";
+            }
+          } elseif ($strPlaceholder == "cats-tags_preview") {
+            $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_add_missing_categories_and_tags( true );
           } elseif ($strPlaceholder == "options-weekdays") {
             $strCustomPlaceholder = $strField.'_day';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
-            $strDayOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
             
             for ($i = 1; $i <= 7; $i++) {
@@ -375,13 +425,12 @@ class AI1EC_Fixes {
               $aPlaceholderValues[$strPlaceholder] .= str_replace(
                 array( '%%value%%', '%%selected%%', '%%label%%' ),
                 array( $i, $strSelected, $aPlaceholderValues['label-day-'.$i] ),
-                $strDayOptionTemplate
+                $strOptionTemplate
               );
             }
           } elseif ($strPlaceholder == "options-hour") {
             $strCustomPlaceholder = $strField.'_time-hour';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
-            $strHourOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
             
             for ($i = 0; $i <= 23; $i++) {
@@ -393,13 +442,12 @@ class AI1EC_Fixes {
               $aPlaceholderValues[$strPlaceholder] .= str_replace(
                 array( '%%value%%', '%%selected%%', '%%label%%' ),
                 array( $i, $strSelected, $i ),
-                $strHourOptionTemplate
+                $strOptionTemplate
               );
             }
           } elseif ($strPlaceholder == "options-minute") {
             $strCustomPlaceholder = $strField.'_time-minute';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
-            $strMinuteOptionTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-select-option.html");
             $aPlaceholderValues[$strPlaceholder] = '';
             
             for ($i = 0; $i <= 59; $i++) {
@@ -411,7 +459,30 @@ class AI1EC_Fixes {
               $aPlaceholderValues[$strPlaceholder] .= str_replace(
                 array( '%%value%%', '%%selected%%', '%%label%%' ),
                 array( $i, $strSelected, $i ),
-                $strMinuteOptionTemplate
+                $strOptionTemplate
+              );
+            }
+          } elseif ($strPlaceholder == "options-festival-category" || $strPlaceholder == "options-party-category") {
+            $strCustomPlaceholder = str_replace( "options-", $strField.'_', $strPlaceholder );
+            $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
+            $aPlaceholderValues[$strPlaceholder] = '';
+            
+            $aPlaceholderValues[$strPlaceholder] .= str_replace(
+              array( '%%value%%', '%%selected%%', '%%label%%' ),
+              array( $this->strOptionValueNone, '', $aPlaceholderValues['label-_none_'] ),
+              $strOptionTemplate
+            );
+            foreach ($this->aTerms['category'] as $objCategory) {
+              $strSlug = $objCategory->slug;
+              if ($mixOptionValue == $strSlug) {
+                $strSelected = 'selected="selected"';
+              } else {
+                $strSelected = '';
+              }
+              $aPlaceholderValues[$strPlaceholder] .= str_replace(
+                array( '%%value%%', '%%selected%%', '%%label%%' ),
+                array( $strSlug, $strSelected, $objCategory->name ),
+                $strOptionTemplate
               );
             }
           } elseif ($strPlaceholder == $strField."-users") {
@@ -420,6 +491,8 @@ class AI1EC_Fixes {
             if (empty($mixOptionValue)) {
               $mixOptionValue = array();
             }
+            $aPlaceholderValues[$strPlaceholder] = '';
+            
             foreach ($aUsers as $objUser) {
               if (in_array($objUser->ID, $mixOptionValue)) {
                 $strChecked = 'checked="checked"';
@@ -434,6 +507,7 @@ class AI1EC_Fixes {
             }
           } elseif ($strPlaceholder == "category-keywords" || $strPlaceholder == "tag-keywords" ) {
             $strTermType = str_replace("-keywords", "", $strPlaceholder);
+            $aPlaceholderValues[$strPlaceholder] = '';
             
             foreach ($this->aTerms[$strTermType] as $objTerm) {
               $strDefaultTermKeywordCheckboxesLoc = "";
@@ -466,9 +540,12 @@ class AI1EC_Fixes {
                 $strTermKeywordsTemplate
               );
             }
-          } else {
+          } elseif (is_string($mixOptionValue)) {
             // Use option value or empty string //
             $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+          } else {
+            // Not a string => use an empty string //
+            $aPlaceholderValues[$strPlaceholder] = "";
           }
         }
       }
@@ -975,7 +1052,7 @@ class AI1EC_Fixes {
   }
   
   public function ai1ecf_filter_pre_delete_post( $bDelete, $oPost, $bForceDelete ) {
-    if ( isset($GLOBALS['ai1ecf_import_running']) && true === $GLOBALS['ai1ecf_import_running'] && $oPost->post_type === 'ai1ec_event' ) {
+    if ( isset($GLOBALS['ai1ecf_import_running']) && true === $GLOBALS['ai1ecf_import_running'] && $oPost->post_type === $this->strAi1ecPostType ) {
       wp_trash_post( $oPost->ID );
       return false;
     }
@@ -1171,7 +1248,7 @@ class AI1EC_Fixes {
   private function ai1ecf_get_events_with_no_featured_image() {
     $aArgs = array(
       'posts_per_page' => -1,
-      'post_type' => 'ai1ec_event',
+      'post_type' => $this->strAi1ecPostType,
       'meta_query' => array(
         array(
           'key' => '_thumbnail_id',
@@ -1197,7 +1274,7 @@ class AI1EC_Fixes {
   
   public function ai1ecf_send_newsletter_reminder() {
     $aOptions = $this->ai1ecf_get_option_field("reminder");
-    foreach (array('time-hour', 'time-minute', 'day') as $key) {
+    foreach (array('reminder_time-hour', 'reminder_time-minute', 'reminder_day') as $key) {
       if (!isset($aOptions[$key])) {
         $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-1.kk');
         return;
@@ -1211,7 +1288,7 @@ class AI1EC_Fixes {
       // $this->ai1ecf_add_debug_log(var_export($strLastSentDate, true), false, 'debug-send-notifications-err-3.kk');
       return;
     }
-    if (intval($aOptions["day"]) !== date("N")) {
+    if (intval($aOptions["reminder_day"]) !== intval(date("N"))) {
       // Not the right day //
       if (!empty($strLastSentDate)) {
         $iLastSentDate = intval($strLastSentDate);
@@ -1224,13 +1301,13 @@ class AI1EC_Fixes {
         }
       } else {
         // No LastSentDate: let's wait for the next time of sending //
-        // $this->ai1ecf_add_debug_log(var_export(date("N"), true), false, 'debug-send-notifications-err-2.kk');
+        // $this->ai1ecf_add_debug_log(var_export(array($aOptions["reminder_day"], date("N")), true), false, 'debug-send-notifications-err-2.kk');
         return;
       }
     } else {
       // Today's reminder has not yet been sent AND it's the right day, so we check the time //
       $iTimeNow = date("G")*100+date("i");
-      $iTimeScheduled = $aOptions['time-hour']*100+$aOptions['time-minute'];
+      $iTimeScheduled = $aOptions['reminder_time-hour']*100+$aOptions['reminder_time-minute'];
       if ($iTimeNow < $iTimeScheduled) {
         // The time has not yet arrived //
         // $this->ai1ecf_add_debug_log(var_export(array($iTimeNow,$iTimeScheduled), true), false, 'debug-send-notifications-err-4.kk');
@@ -1238,27 +1315,34 @@ class AI1EC_Fixes {
       }
     }
 
-    // send email
-    $aArgs = array(
-      'blog_id' => get_current_blog_id(),
-      'include' => $aOptions['reminder_users'],
-    );
-    $aUsers = get_users( $aArgs );
-    if (isset($aOptions['email-addresses']) && !empty($aOptions['email-addresses'])) {
-      $aEmails = explode( ',', $aOptions['email-addresses']);
+    // get emails //
+    if (isset($aOptions['reminder_users'])) {
+      $aArgs = array(
+        'blog_id' => get_current_blog_id(),
+        'include' => $aOptions['reminder_users'],
+      );
+      $aUsers = get_users( $aArgs );
+    } else {
+      $aUsers = array();
+    }
+    if (isset($aOptions['reminder_email-addresses']) && !empty($aOptions['reminder_email-addresses'])) {
+      $aEmails = array_map( "trim", explode( ',', $aOptions['reminder_email-addresses']) );
     } else {
       $aEmails = array();
     }
     foreach ($aUsers as $objUser) {
-      $aEmails[] = $objUser->user_email;
+      if (!in_array( $objUser->user_email, $aEmails )) {
+        $aEmails[] = $objUser->user_email;
+      }
     }
     if (empty($aEmails)) {
       $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-5.kk');
       return;
     }
-
+    
+    // send email //
     $aHeaders = array('Content-Type: text/html; charset=UTF-8');
-    $bRes = wp_mail( $aEmails, $aOptions['email-subject'], $aOptions['reminder_email-body-wp-editor'], $aHeaders);
+    $bRes = wp_mail( $aEmails, $aOptions['reminder_email-subject'], $aOptions['reminder_email-body-wp-editor'], $aHeaders);
     if ($bRes) {
       $this->ai1ecf_save_option_field( "reminder_last_sent_date", $strToday );
     } else {
@@ -1268,11 +1352,472 @@ class AI1EC_Fixes {
     }
   }
 
-  public function ai1ecf_add_missing_categories_and_tags() {
+  public function ai1ecf_add_missing_categories_and_tags( $bNoEmailSend = false ) {
     $this->ai1ecf_maybe_set_ai1ec_terms();
-    // $aOptionValues = $this->ai1ecf_get_option_field( "cats-tags" );
-    // TODO: Go through $this->aTerms => get the keywords to use for each tag/category
-    // TODO: Go through all events with no category assigned
+    
+    $strField = "cats-tags";
+    $strOptionNameSingleCategory = 'cats-tags_single-category';
+    $strOptionNameFestivalCategory = 'cats-tags_festival-category';
+    $strOptionNamePartyCategory = 'cats-tags_party-category';
+    $strOptionNameEnable = 'cats-tags_enable';
+    
+    $aOptionValues = $this->ai1ecf_get_option_field( $strField );
+    $aOptionValues[$strOptionNameSingleCategory] = (isset($aOptionValues[$strOptionNameSingleCategory]) && $aOptionValues[$strOptionNameSingleCategory] == '1');
+    $aOptionValues[$strOptionNameEnable] = (isset($aOptionValues[$strOptionNameEnable]) && $aOptionValues[$strOptionNameEnable] == '1');
+    if (!isset($aOptionValues[$strOptionNameFestivalCategory])) { $aOptionValues[$strOptionNameFestivalCategory]  = $this->strOptionValueNone; }
+    if (!isset($aOptionValues[$strOptionNamePartyCategory])) { $aOptionValues[$strOptionNamePartyCategory]  = $this->strOptionValueNone; }
+    
+//     echo "<pre>".var_export($aOptionValues, true)."</pre>";
+    
+    $aKeywords = array();
+    $aTermIDs = array();
+    foreach ($this->aTerms as $strTermType => $aTerms) {
+      $aKeywords[$strTermType] = array();
+      $aTermIDs[$strTermType] = array();
+      foreach ($aTerms as $objTerm) {
+        $aTermIDs[$strTermType][] = $objTerm->term_id;
+        $strOptionDefault = $strField . "_term-default-keywords-".$strTermType."-".$objTerm->slug;
+        $strOptionAdditional = $strField . "_term-additional-keywords-".$strTermType."-".$objTerm->slug;
+        if (isset($aOptionValues[$strOptionDefault]) && !empty($aOptionValues[$strOptionDefault])) {
+          $aTermKeywords = $aOptionValues[$strOptionDefault];
+        } else {
+          $aTermKeywords = array();
+        }
+        
+        if (isset($aOptionValues[$strOptionAdditional])) {
+          $strAdditionalTermKeywords = trim($aOptionValues[$strOptionAdditional]);
+          if (!empty($strAdditionalTermKeywords)) {
+            $aAdditionalTermKeywords = array_map( "trim", explode( ",", $strAdditionalTermKeywords ) );
+            $aTermKeywords = array_merge( $aTermKeywords, $aAdditionalTermKeywords );
+          }
+        }
+        
+        if (!empty($aTermKeywords)) {
+          $aKeywords[$strTermType][$objTerm->slug] = array(
+            'name' => $objTerm->name,
+            'term_id' => intval($objTerm->term_id),
+            'keywords' => $aTermKeywords,
+          );
+        }
+      }
+    }
+//     echo "<pre>".var_export($aKeywords, true)."</pre>";
+//     echo "<pre>".var_export($aTermIDs, true)."</pre>";
+//     echo "<pre>".var_export($this->aTerms, true)."</pre>";
+    
+    $aTermTaxonomies = array(
+      'category' => $this->strAi1ecCategoryTaxonomy,
+      'tag' => $this->strAi1ecTagTaxonomy,
+    );
+    $aEventsWithoutCategoryArgs = array(
+      'post_type' => $this->strAi1ecPostType,
+      'posts_per_page' => -1,
+      'tax_query' => array(
+        array(
+          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['category']
+        )
+      )
+    );
+    $aEventsWithoutCategoryWithTagArgs = array(
+      'post_type' => $this->strAi1ecPostType,
+      'posts_per_page' => -1,
+      'tax_query' => array(
+        'relation' => 'AND',
+        array(
+          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['category']
+        ),
+        array(
+          'taxonomy' => $this->strAi1ecTagTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'IN',
+          'terms' => $aTermIDs['tag']
+        )
+      )
+    );
+    $aEventsWithoutCategoryWithoutTagArgs = array(
+      'post_type' => $this->strAi1ecPostType,
+      'posts_per_page' => -1,
+      'tax_query' => array(
+        'relation' => 'AND',
+        array(
+          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['category']
+        ),
+        array(
+          'taxonomy' => $this->strAi1ecTagTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['tag']
+        )
+      )
+    );
+    $aEventsWithCategoryWithoutTagArgs = array(
+      'post_type' => $this->strAi1ecPostType,
+      'posts_per_page' => -1,
+      'tax_query' => array(
+        'relation' => 'AND',
+        array(
+          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'IN',
+          'terms' => $aTermIDs['category']
+        ),
+        array(
+          'taxonomy' => $this->strAi1ecTagTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['tag']
+        )
+      )
+    );
+    $aEventsWithoutCategory = get_posts( $aEventsWithoutCategoryArgs );
+    $aEventsWithCategoryWithoutTag = get_posts( $aEventsWithCategoryWithoutTagArgs );
+    
+//     echo "<pre>".var_export($aEventsWithoutCategory, true)."</pre>";
+//     echo "<pre>".var_export(count($aEventsWithoutCategory), true)."</pre>";
+//     echo "<pre>".var_export(count($aEventsWithCategoryWithoutTag), true)."</pre>";
+//     echo "<pre>".var_export($aEventsWithCategoryWithoutTag, true)."</pre>";
+    
+    if (empty($aEventsWithoutCategory) && empty($aEventsWithCategoryWithoutTag)) {
+      if ( $bNoEmailSend ) {
+        return $this->aPlaceholderValues['no-categories-without-terms'];
+      } else {
+        return;
+      }
+    }
+    
+    // Assign all terms to events without category //
+    $aEventProperties = array();
+    $aAssignTerms = array();
+    foreach ($aEventsWithoutCategory as $objEventPost) {
+//       echo "<pre>".var_export($objEventPost, true)."</pre>";
+      $iPostID = $objEventPost->ID;
+      $aAssignTerms[$iPostID] = array(
+        'category' => array(),
+        'tag' => array(),
+      );
+      $strPostUrl = get_permalink( $iPostID );
+      $strPostTitle = $objEventPost->post_title;
+      $strPostContent = $objEventPost->post_content;
+      $objEvent = $this->ai1ecf_get_event_by_post_id($iPostID);
+      $strSourceUrl = $objEvent->get( 'ical_source_url' );
+      $objTimeStart = $objEvent->get( 'start' );
+      $iTimeStart = $objTimeStart->format('U');
+      $iTimeStartHourMinute = $objTimeStart->format('G') * 100 + $objTimeStart->format('i');
+      $objTimeEnd = $objEvent->get( 'end' );
+      $iTimeEnd = $objTimeEnd->format('U');
+      $iTimeEndHourMinute = $objTimeEnd->format('G') * 100 + $objTimeEnd->format('i');
+      
+      $aEventProperties[$iPostID] = array(
+        'post_url' => $strPostUrl,
+        'source_url' => $strSourceUrl,
+        'post_title' => $strPostTitle,
+      );
+//       echo "<pre>".var_export(array( $strPostUrl, $strSourceUrl, $iPostID, $iTimeStart, $iTimeStartHourMinute, $iTimeEnd, $iTimeEndHourMinute ), true)."</pre>";
+      
+      $bTermMatched = false;
+      $bCatMatched = false;
+      if ($aOptionValues[$strOptionNameFestivalCategory] != $this->strOptionValueNone) {
+        if ( $iTimeEnd - $iTimeStart >= ( 24 * 3600 ) ) {
+          $aAssignTerms[$iPostID]['category'][$aOptionValues[$strOptionNameFestivalCategory]][] = 'longer than 1 day';
+          $bTermMatched = true;
+          if ($aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; } // A category was matched already //
+        }
+      }
+      if ($aOptionValues[$strOptionNamePartyCategory] != $this->strOptionValueNone) {
+        if ( $iTimeEnd - $iTimeStart < ( 24 * 3600 ) && $iTimeStartHourMinute >= 2000 && $iTimeEndHourMinute <= 500 ) {
+          $aAssignTerms[$iPostID]['category'][$aOptionValues[$strOptionNamePartyCategory]][] = '20:00 - 05:00';
+          $bTermMatched = true;
+          if ($aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; } // A category was matched already //
+        }
+      }
+      
+      foreach ($aKeywords as $strTermType => $aTermKeywordItems) {
+        if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory] && $bCatMatched) {
+          continue;
+        }
+        foreach ($aTermKeywordItems as $strTermSlug => $aTermKeywordItem) {
+          // $strTermName = $aTermKeywordItem['name'];
+          // $strTermID = $aTermKeywordItem['term_id'];
+          $aTermKeywords = $aTermKeywordItem['keywords'];
+          
+          foreach ($aTermKeywords as $strKeyword) {
+            if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+              $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
+              $bTermMatched = true;
+              if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+            }
+          }
+        }
+      }
+      
+      if (!$bTermMatched) {
+        unset($aAssignTerms[$iPostID]);
+      }
+    }
+    
+    // Assign tags for posts without tags but with a category assigned already //
+    foreach ($aEventsWithCategoryWithoutTag as $objEventPost) {
+      $bTermMatched = false;
+      $iPostID = $objEventPost->ID;
+      $aAssignTerms[$iPostID] = array(
+        'category' => array(),
+        'tag' => array()
+      );
+      
+      $aCats = wp_get_object_terms( $iPostID, $this->strAi1ecCategoryTaxonomy );
+      foreach ($aCats as $objCategory) {
+        $aAssignTerms[$iPostID]['category'][$objCategory->slug] = array( "already assigned" );
+      }
+      
+      $strPostUrl = get_permalink( $iPostID );
+      $strPostTitle = $objEventPost->post_title;
+      $strPostContent = $objEventPost->post_content;
+      $objEvent = $this->ai1ecf_get_event_by_post_id($iPostID);
+      $strSourceUrl = $objEvent->get( 'ical_source_url' );
+      
+      $aEventProperties[$iPostID] = array(
+        'post_url' => $strPostUrl,
+        'source_url' => $strSourceUrl,
+        'post_title' => $strPostTitle,
+      );
+      
+      $strTermType = 'tag';
+      foreach ($aKeywords[$strTermType] as $strTermSlug => $aTermKeywordItem) {
+        // $strTermName = $aTermKeywordItem['name'];
+        // $strTermID = $aTermKeywordItem['term_id'];
+        $aTermKeywords = $aTermKeywordItem['keywords'];
+        
+        foreach ($aTermKeywords as $strKeyword) {
+          if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+            $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
+            $bTermMatched = true;
+          }
+        }
+      }
+
+      if (!$bTermMatched) {
+        unset($aAssignTerms[$iPostID]);
+      }
+    }
+//     echo "<pre>".var_export($aAssignTerms, true)."</pre>";
+    
+    // Build email body //
+    $strEmailBody = '';
+    $domDocument = new DOMDocument( '1.0' );
+    
+    $domEmailBody = $domDocument->createElement( 'div' );
+    $domEmailBody->setAttribute('style', 'width: 100%;');
+    $domDocument->appendChild( $domEmailBody );
+    
+    if (!empty($aAssignTerms)) {
+      $domEmailBody->appendChild( $domDocument->createElement( 'h4', $this->aPlaceholderValues["header-cats-tags-assigned-ok"] ) );
+      $domAssignedTermsTable = $domDocument->createElement( 'table' );
+      $domAssignedTermsTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
+      $domEmailBody->appendChild( $domAssignedTermsTable );
+      
+      $domTr = $domDocument->createElement( 'tr' );
+      $domAssignedTermsTable->appendChild( $domTr );
+      
+      $domTh = $domDocument->createElement( 'th', "Event" );
+      $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
+      $domTr->appendChild( $domTh );
+
+      $domTh = $domDocument->createElement( 'th', "Assigned Categories [reason(s)]" );
+      $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
+      $domTr->appendChild( $domTh );
+      
+      $domTh = $domDocument->createElement( 'th', "Assigned Tags [reason(s)]" );
+      $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
+      $domTr->appendChild( $domTh );
+
+      foreach ($aAssignTerms as $iPostID => $aTermsByType) {
+        $strPostUrl = $aEventProperties[$iPostID]['post_url'];
+        $strEventTitle = $aEventProperties[$iPostID]['post_title'];
+        $strFbUrl = $aEventProperties[$iPostID]['source_url'];
+
+        $domTr = $domDocument->createElement( 'tr' );
+        $domAssignedTermsTable->appendChild( $domTr );
+
+        $domTd = $domDocument->createElement( 'td' );
+        $domTd->setAttribute( 'style', 'border: 1px solid #ccc;' );
+        $domTr->appendChild( $domTd );
+        
+        $domAnchor = $domDocument->createElement( 'a', $strEventTitle );
+        $domAnchor->setAttribute( 'href', $strPostUrl );
+        $domAnchor->setAttribute( 'target', '_blank' );
+        $domTd->appendChild( $domAnchor );
+        
+        $domTd->appendChild( $domDocument->createTextNode( " (" ) );
+
+        $domAnchor = $domDocument->createElement( 'a', "FB" );
+        $domAnchor->setAttribute( 'href', $strFbUrl );
+        $domAnchor->setAttribute( 'target', '_blank' );
+        $domTd->appendChild( $domAnchor );
+        
+        $domTd->appendChild( $domDocument->createTextNode( ")" ) );
+
+        $aTermsToAssign = array();
+        foreach ($aTermsByType as $strTermType => $aTermsBySlug) {
+          $domTd = $domDocument->createElement( 'td' );
+          $domTd->setAttribute( 'style', 'border: 1px solid #ccc;' );
+          $domTr->appendChild( $domTd );
+          
+          foreach ($aTermsBySlug as $strTermSlug => $aTermReasons) {
+            if (isset($aKeywords[$strTermType][$strTermSlug]['term_id'])) {
+              $iTermID = $aKeywords[$strTermType][$strTermSlug]['term_id'];
+              $strTermName = $aKeywords[$strTermType][$strTermSlug]['name'];
+            } else {
+              foreach ($this->aTerms[$strTermType] as $objTerm) {
+                if ($objTerm->slug == $strTermSlug) {
+                  $iTermID = intval($objTerm->term_id);
+                  $strTermName = $objTerm->name;
+                  break;
+                }
+              }
+            }
+            $strTaxonomy = $aTermTaxonomies[$strTermType];
+            
+            $aTermsToAssign[$strTaxonomy][] = $iTermID;
+            
+            $domTd->appendChild( $domDocument->createElement( "strong", $strTermName ) );
+            $domTd->appendChild( $domDocument->createTextNode( " [" ) );
+            foreach ($aTermReasons as $strReason) {
+              $domTd->appendChild( $domDocument->createElement( "em", $strReason ) );
+              $domComma = $domDocument->createTextNode( ", " );
+              $domTd->appendChild( $domComma );
+            }
+            if (!empty($aTermReasons)) {
+              $domTd->removeChild( $domComma );
+            }
+            $domTd->appendChild( $domDocument->createTextNode( "]" ) );
+            $domBr = $domDocument->createElement( 'br' );
+            $domTd->appendChild( $domBr );
+          }
+          if (!empty($aTermsBySlug)) {
+            $domTd->removeChild( $domBr );
+          }
+        }
+        
+  //       echo "<pre>{$iPostID}: ".var_export($aTermsToAssign, true)."</pre>";
+        if ($bNoEmailSend !== true && $aOptionValues[$strOptionNameEnable] === true) {
+          foreach ($aTermsToAssign as $strTaxonomy => $aAssignTermIDs) {
+            wp_set_post_terms( $iPostID, $aAssignTermIDs, $strTaxonomy, true );
+          }
+        }
+      }
+    }
+
+    // Get the events that were still left without terms //
+    $aEventsWithMissingTerms = array(
+      'category1tag0' => get_posts( $aEventsWithCategoryWithoutTagArgs ),
+      'category0tag1' => get_posts( $aEventsWithoutCategoryWithTagArgs ),
+      'category0tag0' => get_posts( $aEventsWithoutCategoryWithoutTagArgs ),
+    );
+    foreach ($aEventsWithMissingTerms as $strType => $aEventPosts) {
+      if (empty($aEventPosts)) {
+        continue;
+      }
+      
+      $domTable = $domDocument->createElement( 'table' );
+      $domTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
+      $bEmpty = true;
+      foreach ($aEventPosts as $objEventPost) {
+        $iPostID = $objEventPost->ID;
+        if (isset($aAssignTerms[$iPostID])) {
+          continue;
+        }
+        $bEmpty = false;
+        
+        if (isset($aEventProperties[$iPostID])) {
+          $strPostUrl = $aEventProperties[$iPostID]['post_url'];
+          $strEventTitle = $aEventProperties[$iPostID]['post_title'];
+          $strFbUrl = $aEventProperties[$iPostID]['source_url'];
+        } else {
+          $strPostUrl = get_permalink( $iPostID );
+          $strEventTitle = $objEventPost->post_title;
+          $objEvent = $this->ai1ecf_get_event_by_post_id($iPostID);
+          $strFbUrl = $objEvent->get( 'ical_source_url' );
+        }
+
+        $domTr = $domDocument->createElement( 'tr' );
+        $domTable->appendChild( $domTr );
+
+        $domTd = $domDocument->createElement( 'td' );
+        $domTd->setAttribute( 'style', 'border: 1px solid #ccc;' );
+        $domTr->appendChild( $domTd );
+
+        $domAnchor = $domDocument->createElement( 'a', $strEventTitle );
+        $domAnchor->setAttribute( 'href', $strPostUrl );
+        $domAnchor->setAttribute( 'target', '_blank' );
+        $domTd->appendChild( $domAnchor );
+        
+        $domTd->appendChild( $domDocument->createTextNode( " (" ) );
+
+        $domAnchor = $domDocument->createElement( 'a', "FB" );
+        $domAnchor->setAttribute( 'href', $strFbUrl );
+        $domAnchor->setAttribute( 'target', '_blank' );
+        $domTd->appendChild( $domAnchor );
+        
+        $domTd->appendChild( $domDocument->createTextNode( ")" ) );
+      }
+      
+      if (!$bEmpty) {
+        $domEmailBody->appendChild( $domDocument->createElement( 'h4', $this->aPlaceholderValues["header-cats-tags-".$strType] ) );
+        $domEmailBody->appendChild( $domTable );
+      }
+    }
+    
+    $strEmailBody = $domDocument->saveHTML($domEmailBody);
+    
+    if ($bNoEmailSend === true) {
+      return $strEmailBody;
+    }
+    if ($aOptionValues[$strOptionNameEnable] !== true) {
+      return;
+    }
+    
+    // Get email addresses //
+    if (isset($aOptionValues['cats-tags_users'])) {
+      $aArgs = array(
+        'blog_id' => get_current_blog_id(),
+        'include' => $aOptionValues['cats-tags_users'],
+      );
+      $aUsers = get_users( $aArgs );
+    } else {
+      $aUsers = array();
+    }
+    if (isset($aOptionValues['cats-tags_email-addresses']) && !empty($aOptionValues['cats-tags_email-addresses'])) {
+      $aEmails = array_map( "trim", explode( ',', $aOptionValues['cats-tags_email-addresses']) );
+    } else {
+      $aEmails = array();
+    }
+    foreach ($aUsers as $objUser) {
+      if (!in_array( $objUser->user_email, $aEmails )) {
+        $aEmails[] = $objUser->user_email;
+      }
+    }
+    if (empty($aEmails)) {
+      $this->ai1ecf_add_debug_log(var_export($aOptionValues, true), false, 'debug-send-notifications-err-5.kk');
+      return;
+    }
+
+    // Send email //
+    $aHeaders = array('Content-Type: text/html; charset=UTF-8');
+    $bRes = wp_mail( $aEmails, $aOptionValues['cats-tags_email-subject'], $strEmailBody, $aHeaders);
+    if (!$bRes) {
+      $this->ai1ecf_add_debug_log(var_export($bRes, true), false, 'debug-send-notifications-res.kk');
+      $this->ai1ecf_add_debug_log(var_export($aEmails, true), false, 'debug-send-notifications-emails.kk');
+      $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-options.kk');
+    }
   }
 
   public function ai1ecf_action_pre_save_event( $eventObject, $update ) {

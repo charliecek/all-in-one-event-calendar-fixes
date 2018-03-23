@@ -2,19 +2,45 @@
   <h3 class="ai1ecf-option-header">%%header-general-settings%%</h3>
 </div>
 <div class="ai1ecf-option-row">
-  <span class="ai1ecf-option-label">%%label-users%%</span>
+  <span class="ai1ecf-option-label">%%label-enable%% <span title="%%info-cats-tags-enable%%"><i class="fa fa-info-circle"></i></span></span>
+  <div class="ai1ecf-option-value">
+    <input id="cats-tags_enable" name="cats-tags_enable" type="checkbox" %%cats-tags_enable-checked%% value="1" class="ai1ecf-option-checkbox-value"/>
+    <label class="ai1ecf-option-checkbox-label" for="cats-tags_enable">%%label-check%%</label>
+  </div>
+</div>
+<div class="ai1ecf-option-row">
+  <span class="ai1ecf-option-label">%%label-cats-tags-users%%</span>
   <div class="ai1ecf-option-value">%%cats-tags-users%%</div>
 </div>
 <div class="ai1ecf-option-row">
-  <label for="cats-tags_email-addresses" class="ai1ecf-option-label">%%label-email-addresses%%</label>
+  <label for="cats-tags_email-addresses" class="ai1ecf-option-label">%%label-cats-tags-email-addresses%%</label>
   <input id="cats-tags_email-addresses" name="cats-tags_email-addresses" type="text" class="ai1ecf-option-value" value="%%cats-tags_email-addresses%%"/>
 </div>
 <div class="ai1ecf-option-row">
-  <label for="cats-tags_email-subject" class="ai1ecf-option-label">%%label-email-subject%%</label>
+  <label for="cats-tags_email-subject" class="ai1ecf-option-label">%%label-cats-tags-email-subject%%</label>
   <input id="cats-tags_email-subject" name="cats-tags_email-subject" type="text" class="ai1ecf-option-value" value="%%cats-tags_email-subject%%"/>
 </div>
 <div class="ai1ecf-option-header-row">
   <h3 class="ai1ecf-option-header">%%header-category-settings%%</h3>
+</div>
+<div class="ai1ecf-option-row">
+  <label for="cats-tags_festival-category" class="ai1ecf-option-label">%%label-festival-category%% <span title="%%info-festival-category%%"><i class="fa fa-info-circle"></i></span></label>
+  <select id="cats-tags_festival-category" name="cats-tags_festival-category" class="ai1ecf-option-value">
+    %%options-festival-category%%
+  </select>
+</div>
+<div class="ai1ecf-option-row">
+  <label for="cats-tags_party-category" class="ai1ecf-option-label">%%label-party-category%% <span title="%%info-party-category%%"><i class="fa fa-info-circle"></i></span></label>
+  <select id="cats-tags_party-category" name="cats-tags_party-category" class="ai1ecf-option-value">
+    %%options-party-category%%
+  </select>
+</div>
+<div class="ai1ecf-option-row">
+  <span class="ai1ecf-option-label">%%label-single-category%% <span title="%%info-single-category%%"><i class="fa fa-info-circle"></i></span></span>
+  <div class="ai1ecf-option-value">
+    <input id="cats-tags_single-category" name="cats-tags_single-category" type="checkbox" %%cats-tags_single-category-checked%% value="1" class="ai1ecf-option-checkbox-value"/>
+    <label class="ai1ecf-option-checkbox-label" for="cats-tags_single-category">%%label-check%%</label>
+  </div>
 </div>
 <div class="ai1ecf-option-row">
   <span class="ai1ecf-option-label">%%label-category-keywords%%</span>
@@ -26,4 +52,8 @@
 <div class="ai1ecf-option-row">
   <span class="ai1ecf-option-label">%%label-tag-keywords%%</span>
   <div class="ai1ecf-option-value">%%tag-keywords%%</div>
+</div>
+<div class="ai1ecf-option-row">
+  <h3 class="ai1ecf-option-header">%%header-cats-tags_preview%%</h3>
+  %%cats-tags_preview%%
 </div>
