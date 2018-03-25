@@ -36,7 +36,7 @@ class AI1EC_Fixes {
   private $strAi1ecCategoryTaxonomy     = 'events_categories';
   private $strAi1ecTagTaxonomy          = 'events_tags';
   private $strOptionValueNone           = '(0)';
-  
+
   /**
     * Constructor
     */
@@ -54,12 +54,12 @@ class AI1EC_Fixes {
 //     add_action( $this->strAi1ecPostType.'_saved', array( $this, 'ai1ecf_action_event_saved' ), 10, 3 );
 
     add_action( 'admin_menu', array( $this, "ai1ecf_add_options_page" ) );
-  
+
     add_action( 'ai1ecf_add_missing_featured_images', array( $this, 'ai1ecf_add_missing_featured_images' ) );
     add_action( 'ai1ecf_send_newsletter_reminder', array( $this, 'ai1ecf_send_newsletter_reminder' ) );
     add_action( 'ai1ecf_add_missing_categories_and_tags', array( $this, 'ai1ecf_add_missing_categories_and_tags' ) );
-    
-    
+
+
     $this->aFieldToPlaceholders = array(
       'venue'                         => array('header-venue', 'header-location_replacement', 'header-examples', 'header-info-venue',
                                                 'venue', 'venue_id', 'venue_value', 'examples', 'row-class'),
@@ -152,14 +152,14 @@ class AI1EC_Fixes {
     );
 
     $this->bLocationReplacementEnabled = get_option( 'ai1ecf-location-replacement-enabled', false );
-    
+
     if ($this->bLocationReplacementEnabled) {
       add_filter( 'ai1ec_rendering_single_event_venues',  array( $this, 'ai1ecf_filter_rendering_single_event_venues'), 10, 2 );
       add_filter( 'ai1ec_theme_args_month.twig',          array( $this, 'ai1ecf_filter_theme_args_month' ), 10, 2 );
       add_filter( 'ai1ec_theme_args_agenda-widget.twig',  array( $this, 'ai1ecf_filter_theme_args_agenda_widget' ), 10, 2 );
     }
     add_filter( 'ai1ec_theme_args_event-excerpt.twig',  array( $this, 'ai1ecf_filter_theme_args_event_excerpt' ), 10, 2 );
-    
+
     $this->aEventUpdateSkipFields = array(
       'time'    => array( 'start', 'end', 'timezone_name', 'allday', 'instant_event', 'recurrence_rules', 'exception_rules', 'recurrence_dates', 'exception_dates' ),
       'place'   => array( 'venue', 'country', 'address', 'city', 'province', 'postal_code' ),
@@ -188,7 +188,7 @@ class AI1EC_Fixes {
     }
     $this->ai1ecf_save_option_field("crons_added", true);
   }
-  
+
   public static function ai1ecf_deactivate() {
     $this->ai1ecf_remove_crons();
   }
@@ -202,7 +202,7 @@ class AI1EC_Fixes {
   public function ai1ecf_translations_load() {
     load_plugin_textdomain('ai1ecf', FALSE, dirname(plugin_basename(__FILE__)).'/languages/');
   }
-  
+
   public function ai1ecf_event_metaboxes() {
     global $wp_meta_boxes;
     add_meta_box(
@@ -214,13 +214,13 @@ class AI1EC_Fixes {
       'high'
     );
   }
-  
+
   public function ai1ecf_event_location_override_metabox_html() {
     global $post;
     $strTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "edit-event-location-override-metabox.html");
     $aPlaceholderValues = $this->aPlaceholderValues;
     $aPlaceholderValues['location-metabox-value'] = get_post_meta($post->ID, AI1ECF_LOCATION_OVERRIDE_POSTMETA_ID, true);
-    
+
     $aCheckboxMeta = get_post_meta($post->ID, AI1ECF_SKIP_EVENT_UPDATE_FROM_FEED_POSTMETA_ID, true);
     if (!is_array($aCheckboxMeta) && empty($aCheckboxMeta)) {
       $aCheckboxMeta = array();
@@ -249,7 +249,7 @@ class AI1EC_Fixes {
     }
     echo $strTemplate;
   }
-  
+
   public function ai1ecf_event_save_post() {
     global $post;
     if (isset($_POST['ai1ecf_event_location_override_metabox_input'])) {
@@ -263,7 +263,7 @@ class AI1EC_Fixes {
     }
     update_post_meta( $post->ID, AI1ECF_SKIP_EVENT_UPDATE_FROM_FEED_POSTMETA_ID, $aSkip );
   }
-  
+
   public function ai1ecf_add_options_page() {
     add_options_page(
       "All-in-One Event Calendar Fixes",
@@ -273,28 +273,28 @@ class AI1EC_Fixes {
       array( $this, "ai1ecf_options_page" )
     );
   }
-  
+
   public function ai1ecf_action_admin_enqueue_scripts($strHook) {
     if ($strHook != "settings_page_" . $this->strOptionsPageSlug) {
       return;
     }
-    
+
     wp_enqueue_style( 'ai1ecf-fa', "https://opensource.keycdn.com/fontawesome/4.7.0/font-awesome.min.css", array(), "4.7.0" );
     wp_enqueue_style( 'ai1ecf-admin-style', plugins_url('css/admin-style.css', __FILE__), array(), AI1ECF_VERSION );
     wp_enqueue_script( 'ai1ecf-admin-js', plugins_url('js/admin-js.js', __FILE__), array(), AI1ECF_VERSION );
   }
-  
+
   private function ai1ecf_get_field_value_id($strValue) {
     $strValue = preg_replace('/\<br(\s*)?\/?\>/i', "", $strValue); // remove <br /? > tags //
     return preg_replace('/[^a-z0-9]/', "_", strtolower(trim($strValue)));
   }
-  
+
   private function ai1ecf_get_wp_editor($strContent, $strEditorID, $aSettings = array()) {
     ob_start();
     wp_editor($strContent, $strEditorID, $aSettings);
     return ob_get_clean();
   }
-  
+
   private function ai1ecf_maybe_set_ai1ec_terms() {
     if (!empty($this->aTerms)) {
       return;
@@ -308,10 +308,10 @@ class AI1EC_Fixes {
       'tag' => get_terms( $this->strAi1ecTagTaxonomy, $aArgs ),
     );
   }
-  
+
   private function ai1ecf_maybe_set_ai1ec_term_placeholders() {
     $this->ai1ecf_maybe_set_ai1ec_terms();
-    
+
     foreach ( $this->aTerms as $strTermType => $aTermsLoc ) {
       foreach ( $aTermsLoc as $objTerm ) {
         $aAttrNames = array(
@@ -326,17 +326,17 @@ class AI1EC_Fixes {
       }
     }
   }
-  
+
   public function ai1ecf_options_page() {
     // Set up term replacement placeholders //
     $this->ai1ecf_maybe_set_ai1ec_term_placeholders();
-    
+
     echo "<h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
 
     if (isset($_POST['save-ai1ecf-options'])) {
       $this->ai1ecf_save_option_page_options($_POST);
     }
-    
+
     $strTablesTemplate = '';
     $strTabs = '';
     $strTableTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-table.html");
@@ -352,7 +352,7 @@ class AI1EC_Fixes {
       'blog_id' => get_current_blog_id(),
     );
     $aUsers = get_users( $aArgs );
-    
+
     // Reminder, category + tag tabs //
     $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
     foreach ($aFieldsNonLoc as $strField) {
@@ -361,7 +361,7 @@ class AI1EC_Fixes {
       $strDivTemplateLoc = $strDivTemplate;
       $strBodyTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-div-body_".$strField.".html");
       $aOptionValues = $this->ai1ecf_get_option_field($strField);
-      
+
       // Check for options saved without prefix and fix them //
       $bSave = false;
       foreach ($aOptionValues as $key => $value) {
@@ -374,7 +374,7 @@ class AI1EC_Fixes {
       if ($bSave) {
         $this->ai1ecf_save_option_field( $strField, $aOptionValues );
       }
-      
+
       /* // DEBUG //
       if ($strField == "cats-tags") {
         // echo "<pre>".var_export($aOptionValues, true)."</pre>";
@@ -389,7 +389,7 @@ class AI1EC_Fixes {
           } else {
             $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
           }
-          
+
           if ($strPlaceholder == $strField."_email-body-wp-editor") {
             $mixOptionValue = (isset($aOptionValues[$strPlaceholder])) ? $aOptionValues[$strPlaceholder] : "";
             $aSettings = array(
@@ -426,7 +426,7 @@ class AI1EC_Fixes {
             $strCustomPlaceholder = $strField.'_day';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             for ($i = 1; $i <= 7; $i++) {
               if ($mixOptionValue == $i) {
                 $strSelected = 'selected="selected"';
@@ -443,7 +443,7 @@ class AI1EC_Fixes {
             $strCustomPlaceholder = $strField.'_time-hour';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             for ($i = 0; $i <= 23; $i++) {
               if ($mixOptionValue == $i) {
                 $strSelected = 'selected="selected"';
@@ -460,7 +460,7 @@ class AI1EC_Fixes {
             $strCustomPlaceholder = $strField.'_time-minute';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             for ($i = 0; $i <= 59; $i++) {
               if ($mixOptionValue == $i) {
                 $strSelected = 'selected="selected"';
@@ -477,7 +477,7 @@ class AI1EC_Fixes {
             $strCustomPlaceholder = str_replace( "options-", $strField.'_', $strPlaceholder );
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             $aPlaceholderValues[$strPlaceholder] .= str_replace(
               array( '%%value%%', '%%selected%%', '%%label%%' ),
               array( $this->strOptionValueNone, '', $aPlaceholderValues['label-_none_'] ),
@@ -503,7 +503,7 @@ class AI1EC_Fixes {
               $mixOptionValue = array();
             }
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             foreach ($aUsers as $objUser) {
               if (in_array($objUser->ID, $mixOptionValue)) {
                 $strChecked = 'checked="checked"';
@@ -519,7 +519,7 @@ class AI1EC_Fixes {
           } elseif ($strPlaceholder == "category-keywords" || $strPlaceholder == "tag-keywords" ) {
             $strTermType = str_replace("-keywords", "", $strPlaceholder);
             $aPlaceholderValues[$strPlaceholder] = '';
-            
+
             foreach ($this->aTerms[$strTermType] as $objTerm) {
               $strDefaultTermKeywordCheckboxesLoc = "";
               $strAttrName = $strField."_term-default-keywords-".$strTermType."-".$objTerm->slug;
@@ -542,7 +542,7 @@ class AI1EC_Fixes {
                   $strCheckboxTemplate
                 );
               }
-            
+
               $strTermAttrName = $strField."_term-additional-keywords-".$strTermType."-".$objTerm->slug;
               $strAdditionalTermKeywordsValue = (isset($aOptionValues[$strTermAttrName])) ? $aOptionValues[$strTermAttrName] : "";
               $aPlaceholderValues[$strPlaceholder] .= str_replace(
@@ -560,10 +560,10 @@ class AI1EC_Fixes {
           }
         }
       }
-      
+
       // Replace placeholders in (local) DIV template //
       $strDivTemplateLoc = str_replace(
-        array( '%%header%%', '%%rows%%', '%%div-id%%', '%%body%%' ), 
+        array( '%%header%%', '%%rows%%', '%%div-id%%', '%%body%%' ),
         array( $strHeaderTemplate, $strRowTemplate, $strField, $strBodyTemplate ),
         $strDivTemplateLoc
       );
@@ -584,14 +584,14 @@ class AI1EC_Fixes {
         $strTabTemplate
       );
     }
-    
+
     // Location override tabs //
     $aOptionValues = array();
     $aFields = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     foreach ($aFields as $strField) {
       $strRowTemplate = '';
       $strHeaderTemplate = '';
-      
+
       $strTableTemplateLoc = $strTableTemplate;
       $aRowTemplate[$strField] = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-row-". $strField .".html");
       $aHeaderTemplate[$strField] = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-header-". $strField .".html");
@@ -599,7 +599,7 @@ class AI1EC_Fixes {
       $aOptionValuesInfo[$strField] = $this->ai1ecf_get_location_field_info($strField);
       $aRules[$strField] = $this->ai1ecf_get_location_rules_by_field($strField);
       $aRules[$strField . "_only_if_empty_value"] = $this->ai1ecf_get_location_rule_checkboxes_by_field($strField);
-      
+
       $iCnt = 0;
       foreach ($aOptionValues[$strField] as $strID => $strValue) {
         if ($iCnt % 2 === 0) {
@@ -608,7 +608,7 @@ class AI1EC_Fixes {
           $aPlaceholderValues['row-class'] = '';
         }
         $strExampleEvents = implode(', ', $aOptionValuesInfo[$strField][$strID]);
-        
+
         $aPlaceholderValues[$strField] = $strValue;
         $aPlaceholderValues[$strField . "_id"] = $strID;
         if (isset($aRules[$strField][$strID])) {
@@ -627,7 +627,7 @@ class AI1EC_Fixes {
           $aPlaceholderValues['checked'] = '';
         }
         $aPlaceholderValues['examples'] = $strExampleEvents;
-        
+
         $strRowTemplateLoc = $aRowTemplate[$strField];
         foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
           $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
@@ -645,7 +645,7 @@ class AI1EC_Fixes {
       $strHeaderTemplate .= $strHeaderTemplateLoc;
 
       $strTableTemplateLoc = str_replace(
-        array( '%%header%%', '%%rows%%', '%%div-id%%' ), 
+        array( '%%header%%', '%%rows%%', '%%div-id%%' ),
         array( $strHeaderTemplate, $strRowTemplate, $strField ),
         $strTableTemplateLoc
       );
@@ -657,14 +657,14 @@ class AI1EC_Fixes {
         $strTabTemplate
       );
     }
-    
+
     $bEnabled = $this->bLocationReplacementEnabled;
     if ($bEnabled) {
       $strEnabledChecked = 'checked="checked"';
     } else {
       $strEnabledChecked = '';
     }
-    
+
     $strFormTemplate = file_get_contents(AI1ECF_PATH_TO_TEMPLATES . "options-form.html");
     $strFormTemplate = str_replace(
       array('%%tables%%', '%%button-value%%', '%%checked%%', '%%location-replacement-enabled-label%%', '%%tabs%%'),
@@ -676,13 +676,13 @@ class AI1EC_Fixes {
     // file_put_contents(__DIR__.'/'."debug-kk", var_export($aRules, true));
 
   }
-  
+
   private function ai1ecf_save_option_page_options($aPost) {
 
 //     echo "<pre>".var_export($aPost, true)."</pre>";
     $aFieldsLoc = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     $aFieldsNonLoc = explode(',', AI1ECF_OPTION_NONLOC_FIELDS);
-    
+
     if (isset($aPost['ai1ecf-location-replacement-enabled']) && $aPost['ai1ecf-location-replacement-enabled'] === "1") {
       $bEnabled = true;
     } else {
@@ -690,7 +690,7 @@ class AI1EC_Fixes {
     }
     update_option( 'ai1ecf-location-replacement-enabled', $bEnabled, true );
     $this->bLocationReplacementEnabled = $bEnabled;
-    
+
     $aFieldToPlaceholders = $this->aFieldToPlaceholders;
     $aPlaceholderValues = $this->aPlaceholderValues;
     foreach ($aFieldsNonLoc as $strField) {
@@ -707,14 +707,14 @@ class AI1EC_Fixes {
       $this->ai1ecf_save_option_field( $strField, $aFieldOptionValues );
       // echo "<pre>".var_export($aFieldOptionValues, true)."</pre>";
     }
-    
+
     foreach ($aFieldsLoc as $strField) {
       $aOptionValues[$strField] = $this->ai1ecf_get_location_field($strField);
       $aRules[$strField] = array();
       if ($strField !== 'venue') {
         $aRules[$strField . "_only_if_empty_value"] = array();
       }
-      
+
       foreach ($aOptionValues[$strField] as $strID => $strValue) {
         if (isset($aPost[$strField.'_'.$strID]) && !empty($aPost[$strField.'_'.$strID])) {
           $aRules[$strField][$strID] = stripslashes( $aPost[$strField.'_'.$strID] );
@@ -733,7 +733,7 @@ class AI1EC_Fixes {
       }
     }
   }
-  
+
   private function ai1ecf_save_location_field($strField, $strValue, $strTitle, $strUrl) {
     if (!isset($strField) || empty($strField)) {
       return;
@@ -754,7 +754,7 @@ class AI1EC_Fixes {
       $aLocationFieldValues[$strID] = $strValue;
       update_option($strOptionName, $aLocationFieldValues, true);
     }
-    
+
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . $strField . "_info";
     $aLocationFieldValuesInfo = get_option($strOptionName, false);
     if (false === $aLocationFieldValuesInfo) {
@@ -770,7 +770,7 @@ class AI1EC_Fixes {
       update_option($strOptionName, $aLocationFieldValuesInfo, true);
     }
   }
-  
+
   private function ai1ecf_get_option_field($strField, $default = array()) {
     $strOptionName = AI1ECF_OPTION_PREFIX . $strField;
     return get_option($strOptionName, $default);
@@ -801,7 +801,7 @@ class AI1EC_Fixes {
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . "rules_" . $strField;
     update_option($strOptionName, $aRules, true);
   }
-  
+
   private function ai1ecf_get_location_rules_by_field($strField) {
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . "rules_" . $strField;
     $aOptionValue = get_option($strOptionName, array());
@@ -815,13 +815,13 @@ class AI1EC_Fixes {
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . "rule_checkboxes_" . $strField;
     update_option($strOptionName, $aRules, true);
   }
-  
+
   private function ai1ecf_get_location_rule_checkboxes_by_field($strField) {
     $strOptionName = AI1ECF_OPTION_LOC_PREFIX . "rule_checkboxes_" . $strField;
     $aOptionValue = get_option($strOptionName, array());
     return $aOptionValue;
   }
-  
+
   public function ai1ecf_filter_rendering_single_event_venues($strVenue, $oEvent) {
     if (!$this->bLocationReplacementEnabled) {
       return $strValue;
@@ -842,14 +842,14 @@ class AI1EC_Fixes {
         return $strLocationOverride;
       }
     }
-    
+
     $aFields = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     foreach ($aFields as $strField) {
       $aRules[$strField] = $this->ai1ecf_get_location_rules_by_field($strField);
       if ($strField !== 'venue') {
         $aRules[$strField . "_only_if_empty_value"] = $this->ai1ecf_get_location_rule_checkboxes_by_field($strField);
       }
-      
+
       switch ($strField) {
         case 'venue':
           $strID = $this->ai1ecf_get_field_value_id($strVenue);
@@ -890,11 +890,11 @@ class AI1EC_Fixes {
         default:
       }
     }
-    
+
     if (true === $bUseAddressIfVenueEmpty && empty($strVenue) && !empty($strAddress)) {
       $strVenue = $strAddress;
     }
-    
+
     return $strVenue;
   }
 
@@ -902,7 +902,7 @@ class AI1EC_Fixes {
     if (!$this->bLocationReplacementEnabled) {
       return $aArgs;
     }
-    
+
     foreach ( $aArgs['cell_array'] as &$week ) {
       foreach ( $week as &$day ) {
         foreach ( $day['events'] as &$event ) {
@@ -913,7 +913,7 @@ class AI1EC_Fixes {
     }
     return $aArgs;
   }
-  
+
   public function ai1ecf_filter_theme_args_agenda_widget( $args, $bIsAdmin ) {
     if (!$this->bLocationReplacementEnabled) {
       return $args;
@@ -929,7 +929,7 @@ class AI1EC_Fixes {
     }
     return $args;
   }
-  
+
   public function ai1ecf_filter_theme_args_event_excerpt( $args, $bIsAdmin ) {
     if (isset($GLOBALS['disable_ai1ec_excerpt_filter']) && true === $GLOBALS['disable_ai1ec_excerpt_filter']) {
       $args['disable_excerpt'] = true;
@@ -947,14 +947,14 @@ class AI1EC_Fixes {
 //     );
     return $args;
   }
-  
+
   public function ai1ecf_get_event_by_post_id( $iPostID ) {
     global $ai1ec_registry;
     $oEvent = new Ai1ec_Event( $ai1ec_registry );
     $oEvent->initialize_from_id( $iPostID );
     return $oEvent;
   }
-  
+
   public function ai1ecf_filter_pre_init_event_from_feed( $aData, $oEvent, $oFeed ) {
     // Find post ID; if successful replace fields defined by postmeta in $aData by the value currently in DB //
     global $ai1ec_registry;
@@ -1010,7 +1010,7 @@ class AI1EC_Fixes {
         }
       }
     }
-    
+
     // Only apply contact fixing if contact fields have not been replaced by DB version (then they should be clean already) //
     if (!isset($aReplacedFieldGroups['contact']) || $aReplacedFieldGroups['contact'] !== true) {
 //       $this->ai1ecf_add_debug_log('fixing contact for post ID '.$iPostID);
@@ -1031,7 +1031,7 @@ class AI1EC_Fixes {
     } else {
       $this->ai1ecf_add_debug_log('skipping contact fixing for post ID '.$iPostID);
     }
-    
+
     // Fix post info //
     $aData['post']['post_author'] = 2;
     $aData['post']['post_content'] = $this->ai1ecf_auto_link_text($aData['post']['post_content'], true);
@@ -1044,7 +1044,7 @@ class AI1EC_Fixes {
       }
       $aData['post']['post_content'] .=  " -->";
     }
-    
+
     // save location data to DB for the fixer screens //
     $aFieldsToSave = explode(',', AI1ECF_OPTION_LOC_FIELDS);
     foreach ($aFieldsToSave as $strFieldToSave) {
@@ -1052,16 +1052,16 @@ class AI1EC_Fixes {
         $this->ai1ecf_save_location_field($strFieldToSave, $aData[$strFieldToSave], $aData['post']['post_title'], $aData['ical_source_url']);
       }
     }
-    
+
     $this->ai1ecf_add_debug_log( "ai1ecf_filter_pre_init_event_from_feed" );
-    
+
     return $aData;
   }
 
   public function ai1ecf_filter_contact_url( $strString ) {
     return __( 'Organizer website', "ai1ecf" );
   }
-  
+
   public function ai1ecf_filter_pre_delete_post( $bDelete, $oPost, $bForceDelete ) {
     if ( isset($GLOBALS['ai1ecf_import_running']) && true === $GLOBALS['ai1ecf_import_running'] && $oPost->post_type === $this->strAi1ecPostType ) {
       wp_trash_post( $oPost->ID );
@@ -1069,17 +1069,17 @@ class AI1EC_Fixes {
     }
     return true;
   }
-  
+
   public function ai1ecf_action_ics_before_import( $aArgs ) {
     $GLOBALS['ai1ecf_import_running'] = true;
   }
-  
+
   public function ai1ecf_action_ics_event_saved( $oEvent, $oFeed ) {
     $iPostID = $oEvent->get( 'post_id' );
     $oPost = $oEvent->get( 'post' );
-    
+
     $this->ai1ecf_add_debug_log( "ai1ecf_action_ics_event_saved" );
-    
+
     $GLOBALS['ai1ecf_event_save'] = true;
     $GLOBALS['ai1ecf_event_fname'] = 'save-debug-log-'. $iPostID . '.kk';
     $GLOBALS['ai1ecf_event_fpath'] = __DIR__ . '/' . $GLOBALS['ai1ecf_event_fname'];
@@ -1098,7 +1098,7 @@ class AI1EC_Fixes {
 
     $this->ai1ecf_parse_and_add_featured_image( $oPost, $iPostID );
   }
-  
+
   private function ai1ecf_parse_and_add_featured_image( $oPost, $iPostID = -1 ) {
     if ($iPostID === -1) {
       $iPostID = $oPost->ID;
@@ -1122,7 +1122,7 @@ class AI1EC_Fixes {
         $bIsNew = ($aMatches[2] === '-new=1' );
       }
       $this->ai1ecf_add_debug_log( "ai1ecf_parse_and_add_featured_image" );
-      
+
       $this->ai1ecf_maybe_set_featured_image( $iPostID, $strPostThumbnailUrl, $bIsNew );
     }
   }
@@ -1132,7 +1132,7 @@ class AI1EC_Fixes {
     if ((!$bIsNew && $bHasPostThumbnail) || !isset($strImageUrl) || empty($strImageUrl)) {
       return;
     }
-    
+
     // make sure the events are imported even if there are too many featured images to import
     $aAttachmentCounter = get_option('ai1ecf_attachment_counter');
     if (false === $aAttachmentCounter) {
@@ -1149,7 +1149,7 @@ class AI1EC_Fixes {
       }
     }
     update_option('ai1ecf_attachment_counter', $aAttachmentCounter, true);
-    
+
     if ($aAttachmentCounter['counter']>ATTACHMENT_COUNT_NUMBER_LIMIT) {
       return;
     }
@@ -1171,7 +1171,7 @@ class AI1EC_Fixes {
     if ($bHasPostThumbnail) {
       delete_post_thumbnail($iPostID);
     }
-    
+
     // load necessary files //
     if (defined('ABSPATH') && !empty(ABSPATH)) {
       $strPathToWPAdmin = ABSPATH . "wp-admin";
@@ -1181,14 +1181,14 @@ class AI1EC_Fixes {
     require_once($strPathToWPAdmin . '/includes/image.php');
     require_once($strPathToWPAdmin . '/includes/file.php');
     require_once($strPathToWPAdmin . '/includes/media.php');
-    
+
     // magic sideload image returns an HTML image, not an ID
     $media = media_sideload_image( $strImageUrl, $iPostID, null, 'src' );
 
     // therefore we must find it so we can set it as featured ID
     if(!empty($media) && !is_wp_error($media)){
       $this->ai1ecf_add_debug_log("successfully added image (" .$media. ") to post " . $iPostID . " via media_sideload_image()", false);
-      
+
       $aArgs['exclude'] = $aOldAttachmentIDs;
 
       // reference new image to set as featured
@@ -1218,7 +1218,7 @@ class AI1EC_Fixes {
    * @param  string $text
    * @param  bool $bOpenInNewWindow
    * @return string
-   * 
+   *
    * Sources: http://stackoverflow.com/a/1959073, http://daringfireball.net/2010/07/improved_regex_for_matching_urls
    */
   private function ai1ecf_auto_link_text($text, $bOpenInNewWindow = false) {
@@ -1255,7 +1255,7 @@ class AI1EC_Fixes {
 
     return preg_replace_callback($pattern, $callback, $text);
   }
-  
+
   private function ai1ecf_get_events_with_no_featured_image() {
     $aArgs = array(
       'posts_per_page' => -1,
@@ -1270,7 +1270,7 @@ class AI1EC_Fixes {
     );
     return get_posts( $aArgs );
   }
-  
+
   public function ai1ecf_add_missing_featured_images() {
     $aPostsWithoutFI = $this->ai1ecf_get_events_with_no_featured_image();
 
@@ -1282,7 +1282,7 @@ class AI1EC_Fixes {
       }
     }
   }
-  
+
   public function ai1ecf_send_newsletter_reminder() {
     $aOptions = $this->ai1ecf_get_option_field("reminder");
     foreach (array('reminder_time-hour', 'reminder_time-minute', 'reminder_day') as $key) {
@@ -1350,7 +1350,7 @@ class AI1EC_Fixes {
       $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-5.kk');
       return;
     }
-    
+
     // send email //
     $aHeaders = array('Content-Type: text/html; charset=UTF-8');
     $bRes = wp_mail( $aEmails, $aOptions['reminder_email-subject'], $aOptions['reminder_email-body-wp-editor'], $aHeaders);
@@ -1365,14 +1365,14 @@ class AI1EC_Fixes {
 
   public function ai1ecf_add_missing_categories_and_tags( $bNoEmailSend = false ) {
     $this->ai1ecf_maybe_set_ai1ec_terms();
-    
+
     $strField = "cats-tags";
     $strOptionNameSingleCategory = 'cats-tags_single-category';
     $strOptionNameFestivalCategory = 'cats-tags_festival-category';
     $strOptionNamePartyCategory = 'cats-tags_party-category';
     $strOptionNameEnable = 'cats-tags_enable';
     $strOptionNameResendPostsWithMissingTerm = 'cats-tags_resend-posts-missing-term';
-    
+
     $aOptionValues = $this->ai1ecf_get_option_field( $strField );
     $aOptionValues[$strOptionNameSingleCategory] = (isset($aOptionValues[$strOptionNameSingleCategory]) && $aOptionValues[$strOptionNameSingleCategory] == '1');
     $aOptionValues[$strOptionNameEnable] = (isset($aOptionValues[$strOptionNameEnable]) && $aOptionValues[$strOptionNameEnable] == '1');
@@ -1385,7 +1385,7 @@ class AI1EC_Fixes {
 
     // echo "<pre>".var_export($aPostIDsUsedInNotifications, true)."</pre>";
     // echo "<pre>".var_export($aOptionValues, true)."</pre>";
-    
+
     $aKeywords = array();
     $aTermIDs = array();
     foreach ($this->aTerms as $strTermType => $aTerms) {
@@ -1400,7 +1400,7 @@ class AI1EC_Fixes {
         } else {
           $aTermKeywords = array();
         }
-        
+
         if (isset($aOptionValues[$strOptionAdditional])) {
           $strAdditionalTermKeywords = trim($aOptionValues[$strOptionAdditional]);
           if (!empty($strAdditionalTermKeywords)) {
@@ -1408,7 +1408,7 @@ class AI1EC_Fixes {
             $aTermKeywords = array_merge( $aTermKeywords, $aAdditionalTermKeywords );
           }
         }
-        
+
         if (!empty($aTermKeywords)) {
           $aKeywords[$strTermType][$objTerm->slug] = array(
             'name' => $objTerm->name,
@@ -1421,7 +1421,7 @@ class AI1EC_Fixes {
 //     echo "<pre>".var_export($aKeywords, true)."</pre>";
 //     echo "<pre>".var_export($aTermIDs, true)."</pre>";
 //     echo "<pre>".var_export($this->aTerms, true)."</pre>";
-    
+
     $aTermTaxonomies = array(
       'category' => $this->strAi1ecCategoryTaxonomy,
       'tag' => $this->strAi1ecTagTaxonomy,
@@ -1497,12 +1497,12 @@ class AI1EC_Fixes {
     );
     $aEventsWithoutCategory = get_posts( $aEventsWithoutCategoryArgs );
     $aEventsWithCategoryWithoutTag = get_posts( $aEventsWithCategoryWithoutTagArgs );
-    
+
 //     echo "<pre>".var_export($aEventsWithoutCategory, true)."</pre>";
 //     echo "<pre>".var_export(count($aEventsWithoutCategory), true)."</pre>";
 //     echo "<pre>".var_export(count($aEventsWithCategoryWithoutTag), true)."</pre>";
 //     echo "<pre>".var_export($aEventsWithCategoryWithoutTag, true)."</pre>";
-    
+
     if (empty($aEventsWithoutCategory) && empty($aEventsWithCategoryWithoutTag)) {
       if ( $bNoEmailSend ) {
         return $this->aPlaceholderValues['no-categories-without-terms'];
@@ -1510,7 +1510,7 @@ class AI1EC_Fixes {
         return;
       }
     }
-    
+
     // Assign all terms to events without category //
     $aEventProperties = array();
     $aAssignTerms = array();
@@ -1535,14 +1535,14 @@ class AI1EC_Fixes {
       $objTimeEnd = $objEvent->get( 'end' );
       $iTimeEnd = $objTimeEnd->format('U');
       $iTimeEndHourMinute = $objTimeEnd->format('G') * 100 + $objTimeEnd->format('i');
-      
+
       $aEventProperties[$iPostID] = array(
         'post_url' => $strPostUrl,
         'source_url' => $strSourceUrl,
         'post_title' => $strPostTitle,
       );
 //       echo "<pre>".var_export(array( $strPostUrl, $strSourceUrl, $iPostID, $iTimeStart, $iTimeStartHourMinute, $iTimeEnd, $iTimeEndHourMinute ), true)."</pre>";
-      
+
       $bTermMatched = false;
       $bCatMatched = false;
       if ($aOptionValues[$strOptionNameFestivalCategory] != $this->strOptionValueNone) {
@@ -1559,7 +1559,7 @@ class AI1EC_Fixes {
           if ($aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; } // A category was matched already //
         }
       }
-      
+
       foreach ($aKeywords as $strTermType => $aTermKeywordItems) {
         if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory] && $bCatMatched) {
           continue;
@@ -1568,7 +1568,7 @@ class AI1EC_Fixes {
           // $strTermName = $aTermKeywordItem['name'];
           // $strTermID = $aTermKeywordItem['term_id'];
           $aTermKeywords = $aTermKeywordItem['keywords'];
-          
+
           foreach ($aTermKeywords as $strKeyword) {
             if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
               $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
@@ -1578,12 +1578,12 @@ class AI1EC_Fixes {
           }
         }
       }
-      
+
       if (!$bTermMatched) {
         unset($aAssignTerms[$iPostID]);
       }
     }
-    
+
     // Assign tags for posts without tags but with a category assigned already //
     foreach ($aEventsWithCategoryWithoutTag as $objEventPost) {
       $bTermMatched = false;
@@ -1594,30 +1594,30 @@ class AI1EC_Fixes {
         'category' => array(),
         'tag' => array()
       );
-      
+
       $aCats = wp_get_object_terms( $iPostID, $this->strAi1ecCategoryTaxonomy );
       foreach ($aCats as $objCategory) {
         $aAssignTerms[$iPostID]['category'][$objCategory->slug] = array( "already assigned" );
       }
-      
+
       $strPostUrl = get_permalink( $iPostID );
       $strPostTitle = $objEventPost->post_title;
       $strPostContent = $objEventPost->post_content;
       $objEvent = $this->ai1ecf_get_event_by_post_id($iPostID);
       $strSourceUrl = $objEvent->get( 'ical_source_url' );
-      
+
       $aEventProperties[$iPostID] = array(
         'post_url' => $strPostUrl,
         'source_url' => $strSourceUrl,
         'post_title' => $strPostTitle,
       );
-      
+
       $strTermType = 'tag';
       foreach ($aKeywords[$strTermType] as $strTermSlug => $aTermKeywordItem) {
         // $strTermName = $aTermKeywordItem['name'];
         // $strTermID = $aTermKeywordItem['term_id'];
         $aTermKeywords = $aTermKeywordItem['keywords'];
-        
+
         foreach ($aTermKeywords as $strKeyword) {
           if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
             $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
@@ -1631,15 +1631,15 @@ class AI1EC_Fixes {
       }
     }
 //     echo "<pre>".var_export($aAssignTerms, true)."</pre>";
-    
+
     // Build email body //
     $strEmailBody = '';
     $domDocument = new DOMDocument( '1.0' );
-    
+
     $domEmailBody = $domDocument->createElement( 'div' );
     $domEmailBody->setAttribute('style', 'width: 100%;');
     $domDocument->appendChild( $domEmailBody );
-    
+
     $bEmailEmpty = true;
     if (!empty($aAssignTerms)) {
       $bEmailEmpty = false;
@@ -1647,10 +1647,10 @@ class AI1EC_Fixes {
       $domAssignedTermsTable = $domDocument->createElement( 'table' );
       $domAssignedTermsTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
       $domEmailBody->appendChild( $domAssignedTermsTable );
-      
+
       $domTr = $domDocument->createElement( 'tr' );
       $domAssignedTermsTable->appendChild( $domTr );
-      
+
       $domTh = $domDocument->createElement( 'th', "Event" );
       $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
       $domTr->appendChild( $domTh );
@@ -1658,7 +1658,7 @@ class AI1EC_Fixes {
       $domTh = $domDocument->createElement( 'th', "Assigned Categories [reason(s)]" );
       $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
       $domTr->appendChild( $domTh );
-      
+
       $domTh = $domDocument->createElement( 'th', "Assigned Tags [reason(s)]" );
       $domTh->setAttribute( 'style', 'border: 1px solid #ccc;' );
       $domTr->appendChild( $domTh );
@@ -1674,19 +1674,19 @@ class AI1EC_Fixes {
         $domTd = $domDocument->createElement( 'td' );
         $domTd->setAttribute( 'style', 'border: 1px solid #ccc;' );
         $domTr->appendChild( $domTd );
-        
+
         $domAnchor = $domDocument->createElement( 'a', $strEventTitle );
         $domAnchor->setAttribute( 'href', $strPostUrl );
         $domAnchor->setAttribute( 'target', '_blank' );
         $domTd->appendChild( $domAnchor );
-        
+
         $domTd->appendChild( $domDocument->createTextNode( " (" ) );
 
         $domAnchor = $domDocument->createElement( 'a', "FB" );
         $domAnchor->setAttribute( 'href', $strFbUrl );
         $domAnchor->setAttribute( 'target', '_blank' );
         $domTd->appendChild( $domAnchor );
-        
+
         $domTd->appendChild( $domDocument->createTextNode( ")" ) );
 
         $aTermsToAssign = array();
@@ -1694,7 +1694,7 @@ class AI1EC_Fixes {
           $domTd = $domDocument->createElement( 'td' );
           $domTd->setAttribute( 'style', 'border: 1px solid #ccc;' );
           $domTr->appendChild( $domTd );
-          
+
           foreach ($aTermsBySlug as $strTermSlug => $aTermReasons) {
             if (isset($aKeywords[$strTermType][$strTermSlug]['term_id'])) {
               $iTermID = $aKeywords[$strTermType][$strTermSlug]['term_id'];
@@ -1709,9 +1709,9 @@ class AI1EC_Fixes {
               }
             }
             $strTaxonomy = $aTermTaxonomies[$strTermType];
-            
+
             $aTermsToAssign[$strTaxonomy][] = $iTermID;
-            
+
             $domTd->appendChild( $domDocument->createElement( "strong", $strTermName ) );
             $domTd->appendChild( $domDocument->createTextNode( " [" ) );
             foreach ($aTermReasons as $strReason) {
@@ -1730,7 +1730,7 @@ class AI1EC_Fixes {
             $domTd->removeChild( $domBr );
           }
         }
-        
+
   //       echo "<pre>{$iPostID}: ".var_export($aTermsToAssign, true)."</pre>";
         if ($bNoEmailSend !== true && $aOptionValues[$strOptionNameEnable] === true) {
           foreach ($aTermsToAssign as $strTaxonomy => $aAssignTermIDs) {
@@ -1757,7 +1757,6 @@ class AI1EC_Fixes {
       if (empty($aEventPosts)) {
         continue;
       }
-      $bEmailEmpty = false;
 
       $domTable = $domDocument->createElement( 'table' );
       $domTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
@@ -1768,8 +1767,11 @@ class AI1EC_Fixes {
         if (isset($aAssignTerms[$iPostID])) {
           continue;
         }
+        if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm] && isset($aPostIDsUsedInNotifications[$iPostID])) {
+          continue;
+        }
         $bEmpty = false;
-        
+
         if (isset($aEventProperties[$iPostID])) {
           $strPostUrl = $aEventProperties[$iPostID]['post_url'];
           $strEventTitle = $aEventProperties[$iPostID]['post_title'];
@@ -1792,20 +1794,21 @@ class AI1EC_Fixes {
         $domAnchor->setAttribute( 'href', $strPostUrl );
         $domAnchor->setAttribute( 'target', '_blank' );
         $domTd->appendChild( $domAnchor );
-        
+
         $domTd->appendChild( $domDocument->createTextNode( " (" ) );
 
         $domAnchor = $domDocument->createElement( 'a', "FB" );
         $domAnchor->setAttribute( 'href', $strFbUrl );
         $domAnchor->setAttribute( 'target', '_blank' );
         $domTd->appendChild( $domAnchor );
-        
+
         $domTd->appendChild( $domDocument->createTextNode( ")" ) );
       }
-      
+
       if (!$bEmpty) {
         $domEmailBody->appendChild( $domDocument->createElement( 'h4', $this->aPlaceholderValues["header-cats-tags-".$strType] ) );
         $domEmailBody->appendChild( $domTable );
+        $bEmailEmpty = false;
       }
     }
 
@@ -1895,7 +1898,7 @@ class AI1EC_Fixes {
       file_put_contents($strDebugFile, $strLogText.PHP_EOL, FILE_APPEND | LOCK_EX);
     }
   }
-  
+
 }
 
 $AI1EC_Fixes = new AI1EC_Fixes();
