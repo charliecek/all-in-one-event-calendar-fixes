@@ -75,11 +75,11 @@ class AI1EC_Fixes {
                                                 'options-weekdays', 'options-hour', 'options-minute' ),
       'cats-tags'                     => array( 'label-cats-tags-users', 'label-cats-tags-email-addresses', 'label-cats-tags-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings', 'header-cats-tags_preview',
                                                 'label-category-keywords', 'label-tag-keywords', 'label-category-name', 'label-tag-name', 'label-additional-term-keywords', 'label-festival-category', 'label-party-category',
-                                                'label-single-category', 'label-check', 'label-_none_', 'label-enable',
-                                                'info-festival-category', 'info-party-category', 'info-single-category', 'info-cats-tags-enable',
+                                                'label-single-category', 'label-check', 'label-_none_', 'label-enable', 'label-resend-posts-missing-term',
+                                                'info-festival-category', 'info-party-category', 'info-single-category', 'info-cats-tags-enable', 'info-cats-tags-resend-posts-missing-term',
                                                 'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords', 'cats-tags_preview',
                                                 'options-festival-category', 'options-party-category', 'cats-tags_festival-category', 'cats-tags_party-category', 'cats-tags_single-category',
-                                                'cats-tags_single-category-checked', 'cats-tags_enable', 'cats-tags_enable-checked' ),
+                                                'cats-tags_single-category-checked', 'cats-tags_enable', 'cats-tags_enable-checked', 'cats-tags_resend-posts-missing-term', 'cats-tags_resend-posts-missing-term-checked' ),
       // ''  => array(  ),
     );
 
@@ -139,12 +139,15 @@ class AI1EC_Fixes {
       'label-check'                         => __( "check", "ai1ecf" ),
       'label-_none_'                        => __( "(none)", "ai1ecf" ),
       'label-enable'                        => __( "Enable", "ai1ecf" ),
+      'label-resend-posts-missing-term'     => __( "List posts with missing categories/tags in notifications more than once", "ai1ecf" ),
       'info-festival-category'              => __( "This category is selected if the event is longer than one day", "ai1ecf" ),
       'info-party-category'                 => __( "This category is selected if the event happens between 20:00 and 5:00 (next day)", "ai1ecf" ),
       'info-single-category'                => __( "Stop after having matched first category.", "ai1ecf" ),
       'info-cats-tags-enable'               => __( "Enable automatic assignment of categories and tags and report emailing", "ai1ecf" ),
+      'info-cats-tags-resend-posts-missing-term'
+                                            => __( "If left unchecked, posts with missing categories/tags will be only listed once in notifications, not every time until they do have a category/post assigned.", "ai1ecf" ),
       'cats-tags-default-subject'           => __( "Automatic category and tag assignment report", "ai1ecf" ),
-      'no-categories-without-terms'         => __( "There are no events without categories or tags", "ai1ecf" ),
+      'no-categories-without-terms'         => __( "There are no events with missing categories or tags", "ai1ecf" ),
       // ''  => __( "", "ai1ecf" ),
     );
 
@@ -404,6 +407,14 @@ class AI1EC_Fixes {
           } elseif ($strPlaceholder == "cats-tags_enable") {
             $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
             $strCheckboxPlaceholder = "cats-tags_enable-checked";
+            if ($mixOptionValue == "1") {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
+            } else {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = "";
+            }
+          } elseif ($strPlaceholder == "cats-tags_resend-posts-missing-term") {
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+            $strCheckboxPlaceholder = "cats-tags_resend-posts-missing-term-checked";
             if ($mixOptionValue == "1") {
               $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
             } else {
@@ -1360,14 +1371,20 @@ class AI1EC_Fixes {
     $strOptionNameFestivalCategory = 'cats-tags_festival-category';
     $strOptionNamePartyCategory = 'cats-tags_party-category';
     $strOptionNameEnable = 'cats-tags_enable';
+    $strOptionNameResendPostsWithMissingTerm = 'cats-tags_resend-posts-missing-term';
     
     $aOptionValues = $this->ai1ecf_get_option_field( $strField );
     $aOptionValues[$strOptionNameSingleCategory] = (isset($aOptionValues[$strOptionNameSingleCategory]) && $aOptionValues[$strOptionNameSingleCategory] == '1');
     $aOptionValues[$strOptionNameEnable] = (isset($aOptionValues[$strOptionNameEnable]) && $aOptionValues[$strOptionNameEnable] == '1');
     if (!isset($aOptionValues[$strOptionNameFestivalCategory])) { $aOptionValues[$strOptionNameFestivalCategory]  = $this->strOptionValueNone; }
     if (!isset($aOptionValues[$strOptionNamePartyCategory])) { $aOptionValues[$strOptionNamePartyCategory]  = $this->strOptionValueNone; }
-    
-//     echo "<pre>".var_export($aOptionValues, true)."</pre>";
+    $aOptionValues[$strOptionNameResendPostsWithMissingTerm] = (isset($aOptionValues[$strOptionNameResendPostsWithMissingTerm]) && $aOptionValues[$strOptionNameResendPostsWithMissingTerm] == '1');
+
+    $strFieldPostIDsUsedInNotifications = 'cats-tags_posts-used-in-notifications';
+    $aPostIDsUsedInNotifications = $this->ai1ecf_get_option_field( $strFieldPostIDsUsedInNotifications );
+
+    // echo "<pre>".var_export($aPostIDsUsedInNotifications, true)."</pre>";
+    // echo "<pre>".var_export($aOptionValues, true)."</pre>";
     
     $aKeywords = array();
     $aTermIDs = array();
@@ -1497,9 +1514,12 @@ class AI1EC_Fixes {
     // Assign all terms to events without category //
     $aEventProperties = array();
     $aAssignTerms = array();
+    $aPostIDsUsedInNotificationsNew = $aPostIDsUsedInNotifications;
     foreach ($aEventsWithoutCategory as $objEventPost) {
 //       echo "<pre>".var_export($objEventPost, true)."</pre>";
       $iPostID = $objEventPost->ID;
+      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm] && isset($aPostIDsUsedInNotifications[$iPostID])) { continue; }
+      $aPostIDsUsedInNotificationsNew[$iPostID] = $iPostID;
       $aAssignTerms[$iPostID] = array(
         'category' => array(),
         'tag' => array(),
@@ -1568,6 +1588,8 @@ class AI1EC_Fixes {
     foreach ($aEventsWithCategoryWithoutTag as $objEventPost) {
       $bTermMatched = false;
       $iPostID = $objEventPost->ID;
+      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm] && isset($aPostIDsUsedInNotifications[$iPostID])) { continue; }
+      $aPostIDsUsedInNotificationsNew[$iPostID] = $iPostID;
       $aAssignTerms[$iPostID] = array(
         'category' => array(),
         'tag' => array()
@@ -1618,7 +1640,9 @@ class AI1EC_Fixes {
     $domEmailBody->setAttribute('style', 'width: 100%;');
     $domDocument->appendChild( $domEmailBody );
     
+    $bEmailEmpty = true;
     if (!empty($aAssignTerms)) {
+      $bEmailEmpty = false;
       $domEmailBody->appendChild( $domDocument->createElement( 'h4', $this->aPlaceholderValues["header-cats-tags-assigned-ok"] ) );
       $domAssignedTermsTable = $domDocument->createElement( 'table' );
       $domAssignedTermsTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
@@ -1716,6 +1740,13 @@ class AI1EC_Fixes {
       }
     }
 
+    // Exclude used posts if checked //
+    if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm]) {
+      $aEventsWithCategoryWithoutTagArgs['post__not_in'] = $aPostIDsUsedInNotifications;
+      $aEventsWithoutCategoryWithTagArgs['post__not_in'] = $aPostIDsUsedInNotifications;
+      $aEventsWithoutCategoryWithoutTagArgs['post__not_in'] = $aPostIDsUsedInNotifications;
+    }
+
     // Get the events that were still left without terms //
     $aEventsWithMissingTerms = array(
       'category1tag0' => get_posts( $aEventsWithCategoryWithoutTagArgs ),
@@ -1726,12 +1757,14 @@ class AI1EC_Fixes {
       if (empty($aEventPosts)) {
         continue;
       }
-      
+      $bEmailEmpty = false;
+
       $domTable = $domDocument->createElement( 'table' );
       $domTable->setAttribute( 'style', 'width: 100%; border: 1px solid #ccc;' );
       $bEmpty = true;
       foreach ($aEventPosts as $objEventPost) {
         $iPostID = $objEventPost->ID;
+        $aPostIDsUsedInNotificationsNew[$iPostID] = $iPostID;
         if (isset($aAssignTerms[$iPostID])) {
           continue;
         }
@@ -1775,16 +1808,22 @@ class AI1EC_Fixes {
         $domEmailBody->appendChild( $domTable );
       }
     }
-    
+
     $strEmailBody = $domDocument->saveHTML($domEmailBody);
-    
+
     if ($bNoEmailSend === true) {
+      if ($bEmailEmpty) {
+        return $this->aPlaceholderValues["no-categories-without-terms"];
+      }
       return $strEmailBody;
     }
     if ($aOptionValues[$strOptionNameEnable] !== true) {
       return;
     }
-    
+    if ($bEmailEmpty) {
+      return;
+    }
+
     // Get email addresses //
     if (isset($aOptionValues['cats-tags_users'])) {
       $aArgs = array(
@@ -1809,6 +1848,9 @@ class AI1EC_Fixes {
       $this->ai1ecf_add_debug_log(var_export($aOptionValues, true), false, 'debug-send-notifications-err-5.kk');
       return;
     }
+
+    // Save Post IDs that have been used in notifications //
+    $this->ai1ecf_save_option_field( $strFieldPostIDsUsedInNotifications, $aPostIDsUsedInNotificationsNew );
 
     // Send email //
     $aHeaders = array('Content-Type: text/html; charset=UTF-8');
