@@ -1816,9 +1816,6 @@ class AI1EC_Fixes {
 
     $strEmailBody = $domDocument->saveHTML($domEmailBody);
 
-    // Save Post IDs that have been used in notifications //
-    $this->ai1ecf_save_option_field( $strFieldPostIDsUsedInNotifications, $aPostIDsUsedInNotificationsNew );
-
     if ($bNoEmailSend === true) {
       if ($bEmailEmpty) {
         return $this->aPlaceholderValues["no-categories-without-terms"];
@@ -1828,6 +1825,10 @@ class AI1EC_Fixes {
     if ($aOptionValues[$strOptionNameEnable] !== true) {
       return;
     }
+
+    // Save Post IDs that have been used in notifications //
+    $this->ai1ecf_save_option_field( $strFieldPostIDsUsedInNotifications, $aPostIDsUsedInNotificationsNew );
+
     if ($bEmailEmpty) {
       return;
     }
