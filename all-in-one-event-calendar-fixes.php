@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.3.1
+ * Version: 1.3.2
  */
 
-define( "AI1ECF_VERSION", "1.3.1" );
+define( "AI1ECF_VERSION", "1.3.2" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1308,6 +1308,7 @@ class AI1EC_Fixes {
           // continue with sending - the last reminder was sent more than a week ago! //
         } else {
           // OK: the last reminder was sent less than a week ago //
+          // $this->ai1ecf_add_debug_log(var_export(array($iLastSentDate, $iToday), true), false, 'debug-send-notifications-err-6.kk');
           return;
         }
       } else {
@@ -1317,7 +1318,8 @@ class AI1EC_Fixes {
       }
     } else {
       // Today's reminder has not yet been sent AND it's the right day, so we check the time //
-      $iTimeNow = date("G")*100+date("i");
+      $iTimeZoneOffset = get_option( 'gmt_offset', 0 );
+      $iTimeNow = (date("G")+$iTimeZoneOffset)*100+date("i");
       $iTimeScheduled = $aOptions['reminder_time-hour']*100+$aOptions['reminder_time-minute'];
       if ($iTimeNow < $iTimeScheduled) {
         // The time has not yet arrived //
