@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.3.2
+ * Version: 1.3.3
  */
 
-define( "AI1ECF_VERSION", "1.3.2" );
+define( "AI1ECF_VERSION", "1.3.3" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1816,6 +1816,9 @@ class AI1EC_Fixes {
 
     $strEmailBody = $domDocument->saveHTML($domEmailBody);
 
+    // Save Post IDs that have been used in notifications //
+    $this->ai1ecf_save_option_field( $strFieldPostIDsUsedInNotifications, $aPostIDsUsedInNotificationsNew );
+
     if ($bNoEmailSend === true) {
       if ($bEmailEmpty) {
         return $this->aPlaceholderValues["no-categories-without-terms"];
@@ -1851,11 +1854,10 @@ class AI1EC_Fixes {
     }
     if (empty($aEmails)) {
       $this->ai1ecf_add_debug_log(var_export($aOptionValues, true), false, 'debug-send-notifications-err-5.kk');
+      $strReportFile = __DIR__.'/automatic-term-assignment-report-'.date('Ymd-Hi').'.html';
+      file_put_contents($strReportFile, $strEmailBody);
       return;
     }
-
-    // Save Post IDs that have been used in notifications //
-    $this->ai1ecf_save_option_field( $strFieldPostIDsUsedInNotifications, $aPostIDsUsedInNotificationsNew );
 
     // Send email //
     $aHeaders = array('Content-Type: text/html; charset=UTF-8');
@@ -1864,6 +1866,8 @@ class AI1EC_Fixes {
       $this->ai1ecf_add_debug_log(var_export($bRes, true), false, 'debug-send-notifications-res.kk');
       $this->ai1ecf_add_debug_log(var_export($aEmails, true), false, 'debug-send-notifications-emails.kk');
       $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-options.kk');
+      $strReportFile = __DIR__.'/automatic-term-assignment-report-'.date('Ymd-Hi').'.html';
+      file_put_contents($strReportFile, $strEmailBody);
     }
   }
 
