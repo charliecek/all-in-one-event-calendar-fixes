@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: All-in-One Event Calendar Fixes
- * Description: All-in-One Event Calendar Fixes
+ * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.3.4
+ * Version: 1.4.0
  */
 
-define( "AI1ECF_VERSION", "1.3.4" );
+define( "AI1ECF_VERSION", "1.4.0" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -44,6 +44,9 @@ class AI1EC_Fixes {
     add_filter( 'ai1ec_pre_init_event_from_feed', array( $this, 'ai1ecf_filter_pre_init_event_from_feed' ), 10, 3 );
     add_filter( 'ai1ec_contact_url', array( $this, 'ai1ecf_filter_contact_url' ) );
     add_filter( 'pre_delete_post', array( $this, 'ai1ecf_filter_pre_delete_post' ), 10, 3 );
+    add_filter( 'wp_trim_excerpt', array( $this, 'ai1ecf_filter_wp_trim_excerpt' ), 1, 2 );
+    add_filter( 'the_excerpt', array( $this, 'ai1ecf_filter_add_space_eol' ), 1 );
+    
     add_action( 'ai1ec_ics_event_saved', array( $this, 'ai1ecf_action_ics_event_saved' ), 10, 2 );
     add_action( 'init', array( $this, 'ai1ecf_translations_load') );
     add_action( 'ai1ec_pre_save_event', array( $this, 'ai1ecf_action_pre_save_event' ), 10, 2 );
@@ -1070,6 +1073,32 @@ class AI1EC_Fixes {
     return true;
   }
 
+  public function ai1ecf_filter_add_space_eol( $strRawExcerpt ) {
+    // Add a space before EOL characters so that the excerpt doesn't glue lines together //
+    $aEOL = array( PHP_EOL, "<br>", "<br/>", "<br />" );
+    $aReplace = array_map(
+      function( $strEol ) { return " ".$strEol; },
+      $aEOL
+    );
+    $strExcerpt = str_ireplace( $aEOL, $aReplace, $strRawExcerpt );
+    
+    // Replace ANCHOR tag content with HREF value //
+    $strExcerpt = preg_replace_callback(
+      '#(<\s*a [^>]*)(href="[^"]+"|href=\'[^\']+\')([^>]*>).+?(<\s*/\s*a\s*>)#xi',
+      function ( $aMatches ) {
+        return $aMatches[1] . $aMatches[2] . $aMatches[3] . trim( str_ireplace( 'href=', '', $aMatches[2] ), "'\"" ) . $aMatches[4];
+      },
+      $strExcerpt
+    );
+    
+    return $strExcerpt;
+  }
+  
+  public function ai1ecf_filter_wp_trim_excerpt( $strText, $strRawExcerpt ) {
+    $strText = $this->ai1ecf_auto_link_text( $strText, true);
+    return $strText;
+  }
+  
   public function ai1ecf_action_ics_before_import( $aArgs ) {
     $GLOBALS['ai1ecf_import_running'] = true;
   }
@@ -1223,7 +1252,7 @@ class AI1EC_Fixes {
    */
   private function ai1ecf_auto_link_text($text, $bOpenInNewWindow = false) {
     $strTarget = $bOpenInNewWindow ? 'target="_blank" ' : '';
-    $subpattern = '([a-z0-9.\-]+[.])+(com|sk|hu)([^/])|'; // Also match .com, .sk, .hu //
+    $subpattern = '([a-z0-9.\-]+[.])+(com|sk|hu|dance)([^/])|'; // Also match .com, .sk, .hu //
     $pattern  = '#(?i)(?<=^|[^a-z@])'.$subpattern.'((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))#';
     $callback = create_function('$matches', '
          $url = array_shift($matches);
