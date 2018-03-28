@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.4.0
+ * Version: 1.4.1
  */
 
-define( "AI1ECF_VERSION", "1.4.0" );
+define( "AI1ECF_VERSION", "1.4.1" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -310,6 +310,33 @@ class AI1EC_Fixes {
       'category' => get_terms( $this->strAi1ecCategoryTaxonomy, $aArgs ),
       'tag' => get_terms( $this->strAi1ecTagTaxonomy, $aArgs ),
     );
+
+    // Order by preference: first, festivals, then parties, then the rest //
+    $strField = "cats-tags";
+    $aOptionValues = $this->ai1ecf_get_option_field( $strField );
+    $strOptionNameFestivalCategory = 'cats-tags_festival-category';
+    $strOptionNamePartyCategory = 'cats-tags_party-category';
+    $aOrderedCategories = array();
+    if (isset($aOptionValues[$strOptionNameFestivalCategory]) && $aOptionValues[$strOptionNameFestivalCategory] !== $this->strOptionValueNone) {
+      foreach ($this->aTerms['category'] as $key => $objCategory) {
+        if ($objCategory->slug == $aOptionValues[$strOptionNameFestivalCategory]) {
+          $aOrderedCategories[] = $objCategory;
+          unset($this->aTerms['category'][$key]);
+        }
+      }
+    }
+    if (!isset($aOptionValues[$strOptionNamePartyCategory]) &&  $aOptionValues[$strOptionNamePartyCategory] !== $this->strOptionValueNone) {
+      foreach ($this->aTerms['category'] as $key => $objCategory) {
+        if ($objCategory->slug == $aOptionValues[$strOptionNamePartyCategory]) {
+          $aOrderedCategories[] = $objCategory;
+          unset($this->aTerms['category'][$key]);
+        }
+      }
+    }
+    if (!empty($aOrderedCategories)) {
+      $aRestOfCategories = $this->aTerms['category'];
+      $this->aTerms['category'] = array_merge( $aOrderedCategories, $aRestOfCategories );
+    }
   }
 
   private function ai1ecf_maybe_set_ai1ec_term_placeholders() {
