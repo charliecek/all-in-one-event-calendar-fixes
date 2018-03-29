@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.4.2
+ * Version: 1.4.3
  */
 
-define( "AI1ECF_VERSION", "1.4.2" );
+define( "AI1ECF_VERSION", "1.4.3" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1628,10 +1628,33 @@ class AI1EC_Fixes {
           $aTermKeywords = $aTermKeywordItem['keywords'];
 
           foreach ($aTermKeywords as $strKeyword) {
-            if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
-              $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
-              $bTermMatched = true;
-              if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+            if (empty($strKeyword)) {
+              continue;
+            }
+            $aKeywordCombinations = array_map( "trim", explode( "+", $strKeyword ) );
+            $iKeywordCombinationCount = count($aKeywordCombinations);
+            if ($iKeywordCombinationCount === 1) {
+              if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+                $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
+                $bTermMatched = true;
+                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+              }
+            } else {
+              $iMatched = 0;
+              foreach ($aKeywordCombinations as $strOneKeyword) {
+                if (empty($strOneKeyword)) {
+                  $iKeywordCombinationCount--;
+                  continue;
+                }
+                if (stripos( $strPostTitle, $strOneKeyword ) !== false || stripos( $strPostContent, $strOneKeyword ) !== false) {
+                  $iMatched++;
+                }
+              }
+              if ($iMatched === $iKeywordCombinationCount) {
+                $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword-combination/'.$strKeyword;
+                $bTermMatched = true;
+                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+              }
             }
           }
         }
@@ -1677,9 +1700,32 @@ class AI1EC_Fixes {
         $aTermKeywords = $aTermKeywordItem['keywords'];
 
         foreach ($aTermKeywords as $strKeyword) {
-          if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
-            $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
-            $bTermMatched = true;
+          if (empty($strKeyword)) {
+            continue;
+          }
+          $aKeywordCombinations = array_map( "trim", explode( "+", $strKeyword ) );
+          $iKeywordCombinationCount = count($aKeywordCombinations);
+          if ($iKeywordCombinationCount === 1) {
+            if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+              $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
+              $bTermMatched = true;
+            }
+          } else {
+            $iMatched = 0;
+            foreach ($aKeywordCombinations as $strOneKeyword) {
+              if (empty($strOneKeyword)) {
+                $iKeywordCombinationCount--;
+                continue;
+              }
+              if (stripos( $strPostTitle, $strOneKeyword ) !== false || stripos( $strPostContent, $strOneKeyword ) !== false) {
+                $iMatched++;
+              }
+            }
+            if ($iMatched === $iKeywordCombinationCount) {
+              $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword-combination/'.$strKeyword;
+              $bTermMatched = true;
+              if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+            }
           }
         }
       }
