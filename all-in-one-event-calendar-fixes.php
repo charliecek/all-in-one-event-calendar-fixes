@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.4.1
+ * Version: 1.4.2
  */
 
-define( "AI1ECF_VERSION", "1.4.1" );
+define( "AI1ECF_VERSION", "1.4.2" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1279,7 +1279,7 @@ class AI1EC_Fixes {
    */
   private function ai1ecf_auto_link_text($text, $bOpenInNewWindow = false) {
     $strTarget = $bOpenInNewWindow ? 'target="_blank" ' : '';
-    $subpattern = '([a-z0-9.\-]+[.])+(com|sk|hu|dance)([^/])|'; // Also match .com, .sk, .hu //
+    $subpattern = '([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])|'; // Also match .com, .sk, .hu //
     $pattern  = '#(?i)(?<=^|[^a-z@])'.$subpattern.'((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))#';
     $callback = create_function('$matches', '
          $url = array_shift($matches);
