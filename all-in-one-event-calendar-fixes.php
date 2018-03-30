@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.4.3
+ * Version: 1.5.0
  */
 
-define( "AI1ECF_VERSION", "1.4.3" );
+define( "AI1ECF_VERSION", "1.5.0" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1446,11 +1446,16 @@ class AI1EC_Fixes {
 
     $aKeywords = array();
     $aTermIDs = array();
+    $aEmptyTerms = array();
     foreach ($this->aTerms as $strTermType => $aTerms) {
       $aKeywords[$strTermType] = array();
       $aTermIDs[$strTermType] = array();
+      $aEmptyTerms[$strTermType] = array();
       foreach ($aTerms as $objTerm) {
         $aTermIDs[$strTermType][] = $objTerm->term_id;
+        if ($objTerm->count == 0) {
+          $aEmptyTerms[$strTermType][$objTerm->term_id] = $objTerm->slug;
+        }
         $strOptionDefault = $strField . "_term-default-keywords-".$strTermType."-".$objTerm->slug;
         $strOptionAdditional = $strField . "_term-additional-keywords-".$strTermType."-".$objTerm->slug;
         if (isset($aOptionValues[$strOptionDefault]) && !empty($aOptionValues[$strOptionDefault])) {
@@ -1478,6 +1483,7 @@ class AI1EC_Fixes {
     }
 //     echo "<pre>".var_export($aKeywords, true)."</pre>";
 //     echo "<pre>".var_export($aTermIDs, true)."</pre>";
+//     echo "<pre>".var_export($aEmptyTerms, true)."</pre>";
 //     echo "<pre>".var_export($this->aTerms, true)."</pre>";
 
     $aTermTaxonomies = array(
@@ -1487,14 +1493,6 @@ class AI1EC_Fixes {
     $aEventsWithoutCategoryArgs = array(
       'post_type' => $this->strAi1ecPostType,
       'posts_per_page' => -1,
-      'tax_query' => array(
-        array(
-          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
-          'field' => 'term_id',
-          'operator' => 'NOT IN',
-          'terms' => $aTermIDs['category']
-        )
-      )
     );
     $aEventsWithoutCategoryWithTagArgs = array(
       'post_type' => $this->strAi1ecPostType,
@@ -1538,21 +1536,35 @@ class AI1EC_Fixes {
       'post_type' => $this->strAi1ecPostType,
       'posts_per_page' => -1,
       'tax_query' => array(
-        'relation' => 'AND',
         array(
           'taxonomy' => $this->strAi1ecCategoryTaxonomy,
           'field' => 'term_id',
           'operator' => 'IN',
           'terms' => $aTermIDs['category']
-        ),
-        array(
-          'taxonomy' => $this->strAi1ecTagTaxonomy,
-          'field' => 'term_id',
-          'operator' => 'NOT IN',
-          'terms' => $aTermIDs['tag']
         )
       )
     );
+    if (empty($aEmptyTerms['category']) || $aOptionValues[$strOptionNameSingleCategory]) {
+      // No empty categories or single category matching is on //
+      $aEventsWithoutCategoryArgs['tax_query'] = array(
+        array(
+          'taxonomy' => $this->strAi1ecCategoryTaxonomy,
+          'field' => 'term_id',
+          'operator' => 'NOT IN',
+          'terms' => $aTermIDs['category']
+        )
+      );
+    }
+    if (empty($aEmptyTerms['tag'])) {
+      // No empty tags //
+      $aEventsWithCategoryWithoutTagArgs['tax_query']['relation'] = 'AND';
+      $aEventsWithCategoryWithoutTagArgs['tax_query'][] = array(
+        'taxonomy' => $this->strAi1ecTagTaxonomy,
+        'field' => 'term_id',
+        'operator' => 'NOT IN',
+        'terms' => $aTermIDs['tag']
+      );
+    }
     $aEventsWithoutCategory = get_posts( $aEventsWithoutCategoryArgs );
     $aEventsWithCategoryWithoutTag = get_posts( $aEventsWithCategoryWithoutTagArgs );
 
@@ -1572,16 +1584,37 @@ class AI1EC_Fixes {
     // Assign all terms to events without category //
     $aEventProperties = array();
     $aAssignTerms = array();
+    $aPostIDsNoCats = array();
     $aPostIDsUsedInNotificationsNew = $aPostIDsUsedInNotifications;
     foreach ($aEventsWithoutCategory as $objEventPost) {
 //       echo "<pre>".var_export($objEventPost, true)."</pre>";
       $iPostID = $objEventPost->ID;
-      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm] && isset($aPostIDsUsedInNotifications[$iPostID])) { continue; }
+      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm]
+        && isset($aPostIDsUsedInNotifications[$iPostID])
+        && empty($aEmptyTerms['category']) // No empty categories => posts with categories had been filtered out already //
+        ) {
+          // There are no empty categories so if listing of used posts is not allowed and this post had already been used, skip this post //
+          continue;
+      }
+
       $aPostIDsUsedInNotificationsNew[$iPostID] = $iPostID;
       $aAssignTerms[$iPostID] = array(
         'category' => array(),
         'tag' => array(),
       );
+
+      if (!empty($aEmptyTerms['category'])) {
+        $aAssignedCats = wp_get_object_terms( $iPostID, $this->strAi1ecCategoryTaxonomy );
+        foreach ($aAssignedCats as $objCat) {
+          $aAssignedCats[] = $objCat->slug;
+          $aAssignTerms[$iPostID]['category'][$objCat->slug] = array( "already assigned" );
+        }
+        $aAssignedTags = wp_get_object_terms( $iPostID, $this->strAi1ecTagTaxonomy );
+        foreach ($aAssignedTags as $objTag) {
+          $aAssignTerms[$iPostID]['tag'][$objTag->slug] = array( "already assigned" );
+        }
+      }
+
       $strPostUrl = get_permalink( $iPostID );
       $strPostTitle = $objEventPost->post_title;
       $strPostContent = $objEventPost->post_content;
@@ -1622,10 +1655,35 @@ class AI1EC_Fixes {
         if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory] && $bCatMatched) {
           continue;
         }
+
         foreach ($aTermKeywordItems as $strTermSlug => $aTermKeywordItem) {
-          // $strTermName = $aTermKeywordItem['name'];
-          // $strTermID = $aTermKeywordItem['term_id'];
           $aTermKeywords = $aTermKeywordItem['keywords'];
+
+          if ($strTermType == 'category' && !empty($aEmptyTerms[$strTermType])) { // For the case of no empty categories, posts with categories had been filtered out already //
+            if (empty($aAssignedCats)) {
+              // Post has no categories yet //
+              if (in_array($strTermSlug, $aEmptyTerms[$strTermType])) {
+                // OK - go and try to match this empty category //
+              } elseif (
+                  !$aOptionValues[$strOptionNameResendPostsWithMissingTerm]
+                  && isset($aPostIDsUsedInNotifications[$iPostID])
+                ) {
+                  // Relist is forbidden and post was used already //
+                  continue; // To next category //
+              } else {
+                // OK - try to match this category //
+              }
+            } else {
+              // Post has categories already //
+              if (in_array($strTermSlug, $aEmptyTerms[$strTermType])) {
+                // OK - go and try to match this empty category //
+              } else {
+                // This is not an empty category //
+                continue;
+              }
+            }
+          }
+          // Else: it's a tag (=>rematch all) or it's a category but there are no empty categories //
 
           foreach ($aTermKeywords as $strKeyword) {
             if (empty($strKeyword)) {
@@ -1637,7 +1695,11 @@ class AI1EC_Fixes {
               if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
                 $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
                 $bTermMatched = true;
-                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) {
+                  // A category was matched already, finishing term of type 'category' //
+                  $bCatMatched = true;
+                  continue 3;
+                }
               }
             } else {
               $iMatched = 0;
@@ -1653,14 +1715,20 @@ class AI1EC_Fixes {
               if ($iMatched === $iKeywordCombinationCount) {
                 $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword-combination/'.$strKeyword;
                 $bTermMatched = true;
-                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
+                if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) {
+                  // A category was matched already, finishing term of type 'category' //
+                  $bCatMatched = true;
+                  continue 3;
+                }
               }
             }
           }
         }
       }
 
-      if (!$bTermMatched) {
+      if ($bTermMatched) {
+        $aPostIDsNoCats[$iPostID] = $iPostID;
+      } else {
         unset($aAssignTerms[$iPostID]);
       }
     }
@@ -1669,13 +1737,32 @@ class AI1EC_Fixes {
     foreach ($aEventsWithCategoryWithoutTag as $objEventPost) {
       $bTermMatched = false;
       $iPostID = $objEventPost->ID;
-      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm] && isset($aPostIDsUsedInNotifications[$iPostID])) { continue; }
+      if (isset($aPostIDsNoCats[$iPostID])) {
+        // We had already processed this one in the previous cycle for categories //
+        // (this only occurs if we have a new category/tag) //
+        continue;
+      }
+      $strTermType = 'tag';
+      if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm]
+        && isset($aPostIDsUsedInNotifications[$iPostID])
+        && empty($aEmptyTerms[$strTermType]) // No empty tags => posts with tags had been filtered out already //
+        ) {
+          // There are no empty tags so if listing of used posts is not allowed and this post had already been used, skip it //
+          continue;
+      }
+
       $aPostIDsUsedInNotificationsNew[$iPostID] = $iPostID;
       $aAssignTerms[$iPostID] = array(
         'category' => array(),
         'tag' => array()
       );
 
+      if (!empty($aEmptyTerms[$strTermType])) {
+        $aAssignedTags = wp_get_object_terms( $iPostID, $this->strAi1ecTagTaxonomy );
+        foreach ($aAssignedTags as $objTag) {
+          $aAssignTerms[$iPostID][$strTermType][$objTag->slug] = array( "already assigned" );
+        }
+      }
       $aCats = wp_get_object_terms( $iPostID, $this->strAi1ecCategoryTaxonomy );
       foreach ($aCats as $objCategory) {
         $aAssignTerms[$iPostID]['category'][$objCategory->slug] = array( "already assigned" );
@@ -1693,11 +1780,33 @@ class AI1EC_Fixes {
         'post_title' => $strPostTitle,
       );
 
-      $strTermType = 'tag';
       foreach ($aKeywords[$strTermType] as $strTermSlug => $aTermKeywordItem) {
-        // $strTermName = $aTermKeywordItem['name'];
-        // $strTermID = $aTermKeywordItem['term_id'];
         $aTermKeywords = $aTermKeywordItem['keywords'];
+
+        if (!empty($aEmptyTerms[$strTermType])) { // For the case of no empty tags, posts with tags had been filtered out already //
+          if (empty($aAssignedTags)) {
+            // Post has no tags yet //
+            if (in_array($strTermSlug, $aEmptyTerms[$strTermType])) {
+              // OK - go and try to match this empty tag //
+            } elseif (
+                !$aOptionValues[$strOptionNameResendPostsWithMissingTerm]
+                && isset($aPostIDsUsedInNotifications[$iPostID])
+              ) {
+                // Relist is forbidden and post was used already //
+                continue;
+            } else {
+              // OK - try to match this tag //
+            }
+          } else {
+            // Post has tags already //
+            if (in_array($strTermSlug, $aEmptyTerms[$strTermType])) {
+              // OK - go and try to match this empty tag //
+            } else {
+              // This is not an empty tag //
+              continue;
+            }
+          }
+        }
 
         foreach ($aTermKeywords as $strKeyword) {
           if (empty($strKeyword)) {
@@ -1724,7 +1833,6 @@ class AI1EC_Fixes {
             if ($iMatched === $iKeywordCombinationCount) {
               $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword-combination/'.$strKeyword;
               $bTermMatched = true;
-              if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) { $bCatMatched = true; continue 3; } // A category was matched already, finishing term of type 'category' //
             }
           }
         }
@@ -1844,6 +1952,15 @@ class AI1EC_Fixes {
       }
     }
 
+    if (!empty($aEmptyTerms['tag'])) {
+      $aEventsWithCategoryWithoutTagArgs['tax_query']['relation'] = 'AND';
+      $aEventsWithCategoryWithoutTagArgs['tax_query'][] = array(
+        'taxonomy' => $this->strAi1ecTagTaxonomy,
+        'field' => 'term_id',
+        'operator' => 'NOT IN',
+        'terms' => $aTermIDs['tag']
+      );
+    }
     // Exclude used posts if checked //
     if (!$aOptionValues[$strOptionNameResendPostsWithMissingTerm]) {
       $aEventsWithCategoryWithoutTagArgs['post__not_in'] = $aPostIDsUsedInNotifications;
