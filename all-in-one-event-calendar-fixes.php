@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.0
+ * Version: 1.5.1
  */
 
-define( "AI1ECF_VERSION", "1.5.0" );
+define( "AI1ECF_VERSION", "1.5.1" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -46,7 +46,7 @@ class AI1EC_Fixes {
     add_filter( 'pre_delete_post', array( $this, 'ai1ecf_filter_pre_delete_post' ), 10, 3 );
     add_filter( 'wp_trim_excerpt', array( $this, 'ai1ecf_filter_wp_trim_excerpt' ), 1, 2 );
     add_filter( 'the_excerpt', array( $this, 'ai1ecf_filter_add_space_eol' ), 1 );
-    
+
     add_action( 'ai1ec_ics_event_saved', array( $this, 'ai1ecf_action_ics_event_saved' ), 10, 2 );
     add_action( 'init', array( $this, 'ai1ecf_translations_load') );
     add_action( 'ai1ec_pre_save_event', array( $this, 'ai1ecf_action_pre_save_event' ), 10, 2 );
@@ -1692,7 +1692,7 @@ class AI1EC_Fixes {
             $aKeywordCombinations = array_map( "trim", explode( "+", $strKeyword ) );
             $iKeywordCombinationCount = count($aKeywordCombinations);
             if ($iKeywordCombinationCount === 1) {
-              if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+              if ($this->ai1ecf_match_keyword($strKeyword, $strPostTitle, $strPostContent)) {
                 $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
                 $bTermMatched = true;
                 if ($strTermType == 'category' && $aOptionValues[$strOptionNameSingleCategory]) {
@@ -1708,7 +1708,7 @@ class AI1EC_Fixes {
                   $iKeywordCombinationCount--;
                   continue;
                 }
-                if (stripos( $strPostTitle, $strOneKeyword ) !== false || stripos( $strPostContent, $strOneKeyword ) !== false) {
+                if ($this->ai1ecf_match_keyword($strOneKeyword, $strPostTitle, $strPostContent)) {
                   $iMatched++;
                 }
               }
@@ -1815,7 +1815,7 @@ class AI1EC_Fixes {
           $aKeywordCombinations = array_map( "trim", explode( "+", $strKeyword ) );
           $iKeywordCombinationCount = count($aKeywordCombinations);
           if ($iKeywordCombinationCount === 1) {
-            if (stripos( $strPostTitle, $strKeyword ) !== false || stripos( $strPostContent, $strKeyword ) !== false) {
+            if ($this->ai1ecf_match_keyword($strKeyword, $strPostTitle, $strPostContent)) {
               $aAssignTerms[$iPostID][$strTermType][$strTermSlug][] = 'keyword/'.$strKeyword;
               $bTermMatched = true;
             }
@@ -1826,7 +1826,7 @@ class AI1EC_Fixes {
                 $iKeywordCombinationCount--;
                 continue;
               }
-              if (stripos( $strPostTitle, $strOneKeyword ) !== false || stripos( $strPostContent, $strOneKeyword ) !== false) {
+              if ($this->ai1ecf_match_keyword($strOneKeyword, $strPostTitle, $strPostContent)) {
                 $iMatched++;
               }
             }
@@ -2088,6 +2088,41 @@ class AI1EC_Fixes {
       $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-options.kk');
       $strReportFile = __DIR__.'/automatic-term-assignment-report-'.date('Ymd-Hi').'.html';
       file_put_contents($strReportFile, $strEmailBody);
+    }
+  }
+
+  private function ai1ecf_match_keyword( $strKeyword, $strPostTitle, $strPostContent ) {
+    if (0 === mb_strpos($strKeyword, '!')) {
+      // Negative matching //
+      $strKeyword = mb_substr($strKeyword, 1);
+      if (0 === mb_strpos($strKeyword, '.')) {
+        $strKeyword = mb_substr($strKeyword, 1);
+      } else {
+        $strKeyword = '\b'.$strKeyword;
+      }
+      if (mb_substr($strKeyword, -1) === '.') {
+        $strKeyword = mb_substr($strKeyword, 0, -1);
+      } else {
+        $strKeyword = $strKeyword.'\b';
+      }
+      $strEscapedKeyword = str_replace( '~', '\~', $strKeyword);
+      return !preg_match('~'.$strEscapedKeyword.'~i', $strPostTitle)
+              && !preg_match('~'.$strEscapedKeyword.'~i', $strPostContent);
+    } else {
+      // Positive matching //
+      if (0 === mb_strpos($strKeyword, '.')) {
+        $strKeyword = mb_substr($strKeyword, 1);
+      } else {
+        $strKeyword = '\b'.$strKeyword;
+      }
+      if (mb_substr($strKeyword, -1) === '.') {
+        $strKeyword = mb_substr($strKeyword, 0, -1);
+      } else {
+        $strKeyword = $strKeyword.'\b';
+      }
+      $strEscapedKeyword = str_replace( '~', '\~', $strKeyword);
+      return preg_match('~'.$strEscapedKeyword.'~i', $strPostTitle)
+              || preg_match('~'.$strEscapedKeyword.'~i', $strPostContent);
     }
   }
 
