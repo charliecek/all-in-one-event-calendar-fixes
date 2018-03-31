@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.2
+ * Version: 1.5.3
  */
 
-define( "AI1ECF_VERSION", "1.5.2" );
+define( "AI1ECF_VERSION", "1.5.3" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -2092,37 +2092,42 @@ class AI1EC_Fixes {
   }
 
   private function ai1ecf_match_keyword( $strKeyword, $strPostTitle, $strPostContent ) {
+    $strKeyword = str_replace( "\'", "'", $strKeyword);
+    $bNegativeMatching = false;
     if (0 === mb_strpos($strKeyword, '!')) {
       // Negative matching //
       $strKeyword = mb_substr($strKeyword, 1);
-      if (0 === mb_strpos($strKeyword, '.')) {
-        $strKeyword = mb_substr($strKeyword, 1);
-      } else {
-        $strKeyword = '\b'.$strKeyword;
-      }
-      if (mb_substr($strKeyword, -1) === '.') {
-        $strKeyword = mb_substr($strKeyword, 0, -1);
-      } else {
-        $strKeyword = $strKeyword.'\b';
-      }
-      $strEscapedKeyword = str_replace( '~', '\~', $strKeyword);
-      return !preg_match('~'.$strEscapedKeyword.'~i', $strPostTitle)
-              && !preg_match('~'.$strEscapedKeyword.'~i', $strPostContent);
+      $bNegativeMatching = true;
+    }
+    $strKeywordWithoutWordDelimiter = $strKeyword;
+
+    if (0 === mb_strpos($strKeyword, '.')) {
+      $strKeyword = mb_substr($strKeyword, 1);
+      $strKeywordWithoutWordDelimiter = mb_substr($strKeywordWithoutWordDelimiter, 1);
     } else {
-      // Positive matching //
-      if (0 === mb_strpos($strKeyword, '.')) {
-        $strKeyword = mb_substr($strKeyword, 1);
-      } else {
-        $strKeyword = '\b'.$strKeyword;
-      }
-      if (mb_substr($strKeyword, -1) === '.') {
-        $strKeyword = mb_substr($strKeyword, 0, -1);
-      } else {
-        $strKeyword = $strKeyword.'\b';
-      }
-      $strEscapedKeyword = str_replace( '~', '\~', $strKeyword);
-      return preg_match('~'.$strEscapedKeyword.'~i', $strPostTitle)
-              || preg_match('~'.$strEscapedKeyword.'~i', $strPostContent);
+      $strKeyword = '\b'.$strKeyword;
+    }
+    if (mb_substr($strKeyword, -1) === '.') {
+      $strKeyword = mb_substr($strKeyword, 0, -1);
+      $strKeywordWithoutWordDelimiter = mb_substr($strKeywordWithoutWordDelimiter, 0, -1);
+    } else {
+      $strKeyword = $strKeyword.'\b';
+    }
+    $strEscapedKeyword = str_replace( '~', '\~', $strKeyword);
+    if (0 === mb_strpos($strKeywordWithoutWordDelimiter, "'") && mb_substr($strKeywordWithoutWordDelimiter, -1) === "'") {
+      $strEscapedKeyword = preg_replace( '~^('.preg_quote('\b', '~').')?'.preg_quote("'", '~').'~', '$1', $strEscapedKeyword );
+      $strEscapedKeyword = preg_replace( '~'.preg_quote("'", '~').'('.preg_quote('\b', '~').')?$~', '$1', $strEscapedKeyword );
+      $strModifierCaseInsensitive = '';
+    } else {
+      $strModifierCaseInsensitive = 'i';
+    }
+
+    if ($bNegativeMatching) {
+      return !preg_match('~'.$strEscapedKeyword.'~'.$strModifierCaseInsensitive, $strPostTitle)
+              && !preg_match('~'.$strEscapedKeyword.'~'.$strModifierCaseInsensitive, $strPostContent);
+    } else {
+      return preg_match('~'.$strEscapedKeyword.'~'.$strModifierCaseInsensitive, $strPostTitle)
+              || preg_match('~'.$strEscapedKeyword.'~'.$strModifierCaseInsensitive, $strPostContent);
     }
   }
 
