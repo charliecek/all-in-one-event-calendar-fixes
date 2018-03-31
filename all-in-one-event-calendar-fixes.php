@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.1
+ * Version: 1.5.2
  */
 
-define( "AI1ECF_VERSION", "1.5.1" );
+define( "AI1ECF_VERSION", "1.5.2" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -97,7 +97,7 @@ class AI1EC_Fixes {
       'header-info-address'                 => __( "These rules affect hover pop-ins (calendar, agenda widget) and the SRD newsletter theme. <strong><em>They do not affect</em></strong> single event pages and excerpts.", "ai1ecf" ),
       'header-info-contact_name'            => __( "These rules affect hover pop-ins (calendar, agenda widget), single event pages, excerpts and the SRD newsletter theme.", "ai1ecf" ),
       'header-reminder'                     => __( "Newsletter reminder", "ai1ecf" ),
-      'header-cats-tags'                    => __( "Automatic categories and tabs", "ai1ecf" ),
+      'header-cats-tags'                    => __( "Automatic categories and tags", "ai1ecf" ),
       'header-cats-tags_preview'            => __( "Email preview", "ai1ecf" ),
       'button-value'                        => __( "Save", "ai1ecf" ),
       'location-replacement-enabled-label'  => __( "Enable location replacement rules?", "ai1ecf" ),
