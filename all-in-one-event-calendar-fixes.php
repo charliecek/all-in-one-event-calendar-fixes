@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.3
+ * Version: 1.5.4
  */
 
-define( "AI1ECF_VERSION", "1.5.3" );
+define( "AI1ECF_VERSION", "1.5.4" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1358,9 +1358,16 @@ class AI1EC_Fixes {
     if (intval($aOptions["reminder_day"]) !== intval(date("N"))) {
       // Not the right day //
       if (!empty($strLastSentDate)) {
-        $iLastSentDate = intval($strLastSentDate);
-        $iToday = intval($strToday);
-        if ($iToday - $iLastSentDate > 7) {
+        $aLastSentDate = array(
+          'year'  => substr($strToday, 0, 4),
+          'month' => substr($strToday, 4, 2),
+          'day'   => substr($strToday, 6),
+        );
+        $iLastSentDate = mktime(0, 0, 0, $aLastSentDate['month'], $aLastSentDate['day'], $aLastSentDate['year']);
+        $iToday = mktime(0, 0, 0, date('n'), date('j'), date('Y'));
+        $i7DaysTime = 7 * 24 * 3600;
+
+        if ($iToday - $iLastSentDate > $i7DaysTime) {
           // continue with sending - the last reminder was sent more than a week ago! //
         } else {
           // OK: the last reminder was sent less than a week ago //
@@ -1408,6 +1415,20 @@ class AI1EC_Fixes {
       $this->ai1ecf_add_debug_log(var_export($aOptions, true), false, 'debug-send-notifications-err-5.kk');
       return;
     }
+
+    $aDebugInfo = array(
+      'options' => $aOptions,
+      'emails' => $aEmails,
+      'strDay' => date("N"),
+      'iDay' => intval(date("N")),
+      'strLastSentDate' => $strLastSentDate,
+      'aLastSentDate' => $aLastSentDate,
+      'today' => $strToday,
+      'iTimeNow' => $iTimeNow,
+      'iTimeScheduled' => $iTimeScheduled,
+      'iTimeZoneOffset' => $iTimeZoneOffset,
+    );
+    $this->ai1ecf_add_debug_log(var_export($aDebugInfo, true), false, 'debug-sending-newsletter-reminder-'.time().'.kk');
 
     // send email //
     $aHeaders = array('Content-Type: text/html; charset=UTF-8');
