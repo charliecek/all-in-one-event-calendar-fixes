@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.4
+ * Version: 1.5.5
  */
 
-define( "AI1ECF_VERSION", "1.5.4" );
+define( "AI1ECF_VERSION", "1.5.5" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -1283,7 +1283,7 @@ class AI1EC_Fixes {
     $pattern  = '#(?i)(?<=^|[^a-z@])'.$subpattern.'((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))#';
     $callback = create_function('$matches', '
          $url = array_shift($matches);
-         if (preg_match(\'~(?i)([a-z0-9.\-]+[.])+(com|sk|hu)([^/])$~\', $url)) {
+         if (preg_match(\'~(?i)([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])$~\', $url)) {
           $prefix = "";
           $suffix = substr($url, strlen($url) - 1, strlen($url));
           $url = substr($url, strlen($prefix), strlen($url) - strlen($suffix));
@@ -1306,7 +1306,7 @@ class AI1EC_Fixes {
              $text = substr($text, 0, $last) . "&hellip;";
          }
 
-         return sprintf(\'%s<a rel="nowfollow" '.$strTarget.'href="%s">%s</a>%s\', $prefix, strtolower($url), $text, $suffix);
+         return sprintf(\'%s<a rel="nowfollow" '.$strTarget.'href="%s">%s</a>%s\', $prefix, $url, $text, $suffix);
     ');
 
     return preg_replace_callback($pattern, $callback, $text);
