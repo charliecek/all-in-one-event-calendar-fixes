@@ -4,10 +4,10 @@
  * Description: All-in-One Event Calendar Fixes And Event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.5
+ * Version: 1.5.6
  */
 
-define( "AI1ECF_VERSION", "1.5.5" );
+define( "AI1ECF_VERSION", "1.5.6" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -61,6 +61,7 @@ class AI1EC_Fixes {
     add_action( 'ai1ecf_add_missing_featured_images', array( $this, 'ai1ecf_add_missing_featured_images' ) );
     add_action( 'ai1ecf_send_newsletter_reminder', array( $this, 'ai1ecf_send_newsletter_reminder' ) );
     add_action( 'ai1ecf_add_missing_categories_and_tags', array( $this, 'ai1ecf_add_missing_categories_and_tags' ) );
+    add_action( 'ai1ecf_cron_scheduler', array( $this, 'cron_scheduler' ) );
 
 
     $this->aFieldToPlaceholders = array(
@@ -172,6 +173,8 @@ class AI1EC_Fixes {
     $bCronsAdded = $this->ai1ecf_get_option_field("crons_added", false);
     if (!$bCronsAdded) {
       $this->ai1ecf_maybe_add_crons();
+    } elseif ( !wp_next_scheduled( 'ai1ecf_cron_scheduler' ) ) {
+      wp_schedule_event( time(), 'hourly', 'ai1ecf_cron_scheduler');
     }
   }
 
@@ -189,6 +192,9 @@ class AI1EC_Fixes {
     if ( !wp_next_scheduled( 'ai1ecf_add_missing_categories_and_tags' ) ) {
       wp_schedule_event( time(), 'twicedaily', 'ai1ecf_add_missing_categories_and_tags');
     }
+    if ( !wp_next_scheduled( 'ai1ecf_cron_scheduler' ) ) {
+      wp_schedule_event( time(), 'hourly', 'ai1ecf_cron_scheduler');
+    }
     $this->ai1ecf_save_option_field("crons_added", true);
   }
 
@@ -200,6 +206,25 @@ class AI1EC_Fixes {
     wp_clear_scheduled_hook('ai1ecf_add_missing_featured_images');
     wp_clear_scheduled_hook('ai1ecf_send_newsletter_reminder');
     wp_clear_scheduled_hook('ai1ecf_add_missing_categories_and_tags');
+    wp_clear_scheduled_hook('ai1ecf_cron_scheduler');
+  }
+
+  public function cron_scheduler() {
+    $aReminderOptions = $this->ai1ecf_get_option_field("reminder");
+    $iReminderDay = $aReminderOptions['reminder_day'];
+    $strSchedule = intval($iReminderDay) === intval(date("N")) ? 'hourly' : 'twicedaily';
+    $strMissingCatsAndTagsCron = "ai1ecf_add_missing_categories_and_tags";
+    if ( !wp_next_scheduled( $strMissingCatsAndTagsCron ) ) {
+      wp_schedule_event( time(), $strSchedule, $strMissingCatsAndTagsCron);
+    } else {
+      $strScheduleCurrent = wp_get_schedule( $strMissingCatsAndTagsCron );
+      if ($strScheduleCurrent != $strSchedule) {
+        if (false !== $strScheduleCurrent) {
+          wp_clear_scheduled_hook($strMissingCatsAndTagsCron);
+        }
+        wp_schedule_event( time(), $strSchedule, $strMissingCatsAndTagsCron);
+      }
+    }
   }
 
   public function ai1ecf_translations_load() {
@@ -268,17 +293,19 @@ class AI1EC_Fixes {
   }
 
   public function ai1ecf_add_options_page() {
-    add_options_page(
+    add_menu_page(
       "All-in-One Event Calendar Fixes",
       "All-in-One Event Calendar Fixes",
       "manage_options",
       $this->strOptionsPageSlug,
-      array( $this, "ai1ecf_options_page" )
+      array( $this, "ai1ecf_options_page" ),
+      'dashicons-calendar-alt',
+      58
     );
   }
 
   public function ai1ecf_action_admin_enqueue_scripts($strHook) {
-    if ($strHook != "settings_page_" . $this->strOptionsPageSlug) {
+    if ($strHook != "toplevel_page_" . $this->strOptionsPageSlug) {
       return;
     }
 
@@ -361,7 +388,7 @@ class AI1EC_Fixes {
     // Set up term replacement placeholders //
     $this->ai1ecf_maybe_set_ai1ec_term_placeholders();
 
-    echo "<h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
+    echo "<div class=\"wrap\"><h1>" . __("All-in-One Event Calendar Fixes", "ai1ecf" ) . "</h1>";
 
     if (isset($_POST['save-ai1ecf-options'])) {
       $this->ai1ecf_save_option_page_options($_POST);
@@ -702,6 +729,7 @@ class AI1EC_Fixes {
       $strFormTemplate
     );
     echo $strFormTemplate;
+    echo '</div><!-- .wrap -->';
 
     // file_put_contents(__DIR__.'/'."debug-kk", var_export($aRules, true));
 
