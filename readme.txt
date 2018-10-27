@@ -123,5 +123,3 @@ Ordering of categories: festivals first, then parties, then the rest
 - add missing featured images
 - parse contact and featured image at importing time
 
-
-[View the rest on Github](https://github.com/charliecek/all-in-one-event-calendar-fixes/releases?after=v0.1.0)
