@@ -1,1 +1,0 @@
-# All-in-One Event Calendar Fixes

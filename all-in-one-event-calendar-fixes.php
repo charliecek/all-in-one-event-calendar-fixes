@@ -2,12 +2,18 @@
 /**
  * Plugin Name: All-in-One Event Calendar Fixes
  * Description: All-in-One Event Calendar Fixes And Event related improvements
+ * Short Description: Fixes for AI1EC and adds event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.6
+ * Version: 1.5.7
+ * Requires at least: 4.8
+ * Tested up to: 4.9.8
+ * Requires PHP: 5.6
+ * License: GPLv3
+ * License URI: https://www.gnu.org/licenses/gpl.html
  */
 
-define( "AI1ECF_VERSION", "1.5.6" );
+define( "AI1ECF_VERSION", "1.5.7" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2*60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name");
@@ -77,13 +83,13 @@ class AI1EC_Fixes {
       'reminder'                      => array( 'label-users', 'label-email-addresses', 'label-email-subject', 'label-email-body', 'label-time', 'label-day',
                                                 'reminder-users', 'reminder_users', 'reminder_email-addresses', 'reminder_email-subject', 'reminder_email-body-wp-editor', 'reminder_email-body-wp-editor', 'reminder_time-minute', 'reminder_time-hour', 'reminder_day',
                                                 'options-weekdays', 'options-hour', 'options-minute' ),
-      'cats-tags'                     => array( 'label-cats-tags-users', 'label-cats-tags-email-addresses', 'label-cats-tags-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings', 'header-cats-tags_preview',
+      'cats-tags'                     => array( 'label-cats-tags-users', 'label-cats-tags-email-addresses', 'label-cats-tags-email-subject', 'header-general-settings', 'header-category-settings', 'header-tag-settings', 'header-cats-tags_preview', 'header-missing-cats-tags',
                                                 'label-category-keywords', 'label-tag-keywords', 'label-category-name', 'label-tag-name', 'label-additional-term-keywords', 'label-festival-category', 'label-party-category',
-                                                'label-single-category', 'label-check', 'label-_none_', 'label-enable', 'label-resend-posts-missing-term',
+                                                'label-single-category', 'label-check', 'label-_none_', 'label-enable', 'label-resend-posts-missing-term', 'label-show-email-preview', 'label-show-missing-cats-tags',
                                                 'info-festival-category', 'info-party-category', 'info-single-category', 'info-cats-tags-enable', 'info-cats-tags-resend-posts-missing-term',
-                                                'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords', 'cats-tags_preview',
+                                                'cats-tags-users', 'cats-tags_users', 'cats-tags_email-addresses', 'cats-tags_email-subject', 'category-keywords', 'tag-keywords', 'cats-tags_preview', 'missing-cats-tags', 'cats-tags_show-email-preview', 'cats-tags_show-missing-cats-tags',
                                                 'options-festival-category', 'options-party-category', 'cats-tags_festival-category', 'cats-tags_party-category', 'cats-tags_single-category',
-                                                'cats-tags_single-category-checked', 'cats-tags_enable', 'cats-tags_enable-checked', 'cats-tags_resend-posts-missing-term', 'cats-tags_resend-posts-missing-term-checked' ),
+                                                'cats-tags_single-category-checked', 'cats-tags_enable', 'cats-tags_enable-checked', 'cats-tags_resend-posts-missing-term', 'cats-tags_resend-posts-missing-term-checked', 'cats-tags_show-email-preview-checked', 'cats-tags_show-missing-cats-tags-checked' ),
       // ''  => array(  ),
     );
 
@@ -100,6 +106,7 @@ class AI1EC_Fixes {
       'header-reminder'                     => __( "Newsletter reminder", "ai1ecf" ),
       'header-cats-tags'                    => __( "Automatic categories and tags", "ai1ecf" ),
       'header-cats-tags_preview'            => __( "Email preview", "ai1ecf" ),
+      'header-missing-cats-tags'            => __( "Missing categories and/or tags", "ai1ecf" ),
       'button-value'                        => __( "Save", "ai1ecf" ),
       'location-replacement-enabled-label'  => __( "Enable location replacement rules?", "ai1ecf" ),
       'ai1ecf-metabox-title'                => __( "All-in-One Event Calendar Fixes", "ai1ecf" ),
@@ -144,6 +151,8 @@ class AI1EC_Fixes {
       'label-_none_'                        => __( "(none)", "ai1ecf" ),
       'label-enable'                        => __( "Enable", "ai1ecf" ),
       'label-resend-posts-missing-term'     => __( "List posts with missing categories/tags in notifications more than once", "ai1ecf" ),
+      'label-show-email-preview'            => __( "Show email preview below", "ai1ecf" ),
+      'label-show-missing-cats-tags'        => __( "Show missing categories and/or tags below", "ai1ecf" ),
       'info-festival-category'              => __( "This category is selected if the event is longer than one day", "ai1ecf" ),
       'info-party-category'                 => __( "This category is selected if the event happens between 20:00 and 5:00 (next day)", "ai1ecf" ),
       'info-single-category'                => __( "Stop after having matched first category.", "ai1ecf" ),
@@ -152,6 +161,7 @@ class AI1EC_Fixes {
                                             => __( "If left unchecked, posts with missing categories/tags will be only listed once in notifications, not every time until they do have a category/post assigned.", "ai1ecf" ),
       'cats-tags-default-subject'           => __( "Automatic category and tag assignment report", "ai1ecf" ),
       'no-categories-without-terms'         => __( "There are no events with missing categories or tags", "ai1ecf" ),
+      "preview-disabled"                    => __( "Preview disabled in options above.", "ai1ecf"),
       // ''  => __( "", "ai1ecf" ),
     );
 
@@ -477,8 +487,38 @@ class AI1EC_Fixes {
             } else {
               $aPlaceholderValues[$strCheckboxPlaceholder] = "";
             }
+          } elseif ($strPlaceholder == "cats-tags_show-missing-cats-tags") {
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+            $strCheckboxPlaceholder = "cats-tags_show-missing-cats-tags-checked";
+            if ($mixOptionValue == "1") {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
+            } else {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = "";
+            }
+          } elseif ($strPlaceholder == "cats-tags_show-email-preview") {
+            $aPlaceholderValues[$strPlaceholder] = $mixOptionValue;
+            $strCheckboxPlaceholder = "cats-tags_show-email-preview-checked";
+            if ($mixOptionValue == "1") {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = 'checked="checked"';
+            } else {
+              $aPlaceholderValues[$strCheckboxPlaceholder] = "";
+            }
           } elseif ($strPlaceholder == "cats-tags_preview") {
-            $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_add_missing_categories_and_tags( true );
+            $strKeyToCheck = "cats-tags_show-email-preview";
+            $bShow = (isset($aOptionValues[$strKeyToCheck]) && $aOptionValues[$strKeyToCheck] == '1');
+            if ($bShow) {
+              $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_add_missing_categories_and_tags( true );
+            } else {
+              $aPlaceholderValues[$strPlaceholder] = $aPlaceholderValues["preview-disabled"];
+            }
+          } elseif ($strPlaceholder == "missing-cats-tags") {
+            $strKeyToCheck = "cats-tags_show-missing-cats-tags";
+            $bShow = (isset($aOptionValues[$strKeyToCheck]) && $aOptionValues[$strKeyToCheck] == '1');
+            if ($bShow) {
+              $aPlaceholderValues[$strPlaceholder] = $this->ai1ecf_add_missing_categories_and_tags( true, true );
+            } else {
+              $aPlaceholderValues[$strPlaceholder] = $aPlaceholderValues["preview-disabled"];
+            }
           } elseif ($strPlaceholder == "options-weekdays") {
             $strCustomPlaceholder = $strField.'_day';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : "";
@@ -553,7 +593,7 @@ class AI1EC_Fixes {
                 $strOptionTemplate
               );
             }
-          } elseif ($strPlaceholder == $strField."-users") {
+          } elseif ($strPlaceholder == "$strField-users") {
             $strCustomPlaceholder = $strField.'_users';
             $mixOptionValue = (isset($aOptionValues[$strCustomPlaceholder])) ? $aOptionValues[$strCustomPlaceholder] : array();
             if (empty($mixOptionValue)) {
@@ -625,9 +665,12 @@ class AI1EC_Fixes {
         $strDivTemplateLoc
       );
 
-      if (!empty($aFieldToPlaceholders[$strField])) {
+      if (isset($aFieldToPlaceholders[$strField]) && !empty($aFieldToPlaceholders[$strField])) {
         foreach ($aFieldToPlaceholders[$strField] as $strPlaceholder) {
-          $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
+          $strPlaceholderValue = "";
+          if (isset($aPlaceholderValues[$strPlaceholder])) {
+            $strPlaceholderValue = stripslashes( $aPlaceholderValues[$strPlaceholder] );
+          }
           $strDivTemplateLoc = str_replace('%%'.$strPlaceholder.'%%', $strPlaceholderValue, $strDivTemplateLoc);
         }
       }
@@ -1309,33 +1352,60 @@ class AI1EC_Fixes {
     $strTarget = $bOpenInNewWindow ? 'target="_blank" ' : '';
     $subpattern = '([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])|'; // Also match .com, .sk, .hu //
     $pattern  = '#(?i)(?<=^|[^a-z@])'.$subpattern.'((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))#';
-    $callback = create_function('$matches', '
-         $url = array_shift($matches);
-         if (preg_match(\'~(?i)([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])$~\', $url)) {
-          $prefix = "";
-          $suffix = substr($url, strlen($url) - 1, strlen($url));
-          $url = substr($url, strlen($prefix), strlen($url) - strlen($suffix));
-         } else {
-          $prefix = "";
-          $suffix = "";
-         }
-         $sub7 = strtolower(substr($url, 0, 7));
-         $sub8 = strtolower(substr($url, 0, 8));
-         if ( $sub7 !== "http://" && $sub8 !== "https://") {
-           $url = "http://".$url;
-         }
-         //$url_parts = parse_url($url);
+//     $callback = create_function('$matches', '
+//          $url = array_shift($matches);
+//          if (preg_match(\'~(?i)([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])$~\', $url)) {
+//           $prefix = "";
+//           $suffix = substr($url, strlen($url) - 1, strlen($url));
+//           $url = substr($url, strlen($prefix), strlen($url) - strlen($suffix));
+//          } else {
+//           $prefix = "";
+//           $suffix = "";
+//          }
+//          $sub7 = strtolower(substr($url, 0, 7));
+//          $sub8 = strtolower(substr($url, 0, 8));
+//          if ( $sub7 !== "http://" && $sub8 !== "https://") {
+//            $url = "http://".$url;
+//          }
+//          //$url_parts = parse_url($url);
+//
+//          $text = parse_url($url, PHP_URL_HOST) . parse_url($url, PHP_URL_PATH);
+//          $text = preg_replace("~^(https?://)?www.~", "", $text);
+//
+//          $last = -(strlen(strrchr($text, "/"))) + 1;
+//          if ($last < 0) {
+//              $text = substr($text, 0, $last) . "&hellip;";
+//          }
+//
+//          return sprintf(\'%s<a rel="nowfollow" '.$strTarget.'href="%s">%s</a>%s\', $prefix, $url, $text, $suffix);
+//     ');
+    $callback = function($matches) use ($strTarget) {
+      $url = array_shift($matches);
+      if (preg_match('~(?i)([a-z0-9.\-]+[.])+(com|sk|hu|dance|org)([^/])$~', $url)) {
+        $prefix = "";
+        $suffix = substr($url, strlen($url) - 1, strlen($url));
+        $url = substr($url, strlen($prefix), strlen($url) - strlen($suffix));
+      } else {
+        $prefix = "";
+        $suffix = "";
+      }
+      $sub7 = strtolower(substr($url, 0, 7));
+      $sub8 = strtolower(substr($url, 0, 8));
+      if ( $sub7 !== "http://" && $sub8 !== "https://") {
+        $url = "http://".$url;
+      }
+      //$url_parts = parse_url($url);
 
-         $text = parse_url($url, PHP_URL_HOST) . parse_url($url, PHP_URL_PATH);
-         $text = preg_replace("~^(https?://)?www.~", "", $text);
+      $text = parse_url($url, PHP_URL_HOST) . parse_url($url, PHP_URL_PATH);
+      $text = preg_replace("~^(https?://)?www.~", "", $text);
 
-         $last = -(strlen(strrchr($text, "/"))) + 1;
-         if ($last < 0) {
-             $text = substr($text, 0, $last) . "&hellip;";
-         }
+      $last = -(strlen(strrchr($text, "/"))) + 1;
+      if ($last < 0) {
+        $text = substr($text, 0, $last) . "&hellip;";
+      }
 
-         return sprintf(\'%s<a rel="nowfollow" '.$strTarget.'href="%s">%s</a>%s\', $prefix, $url, $text, $suffix);
-    ');
+      return sprintf('%s<a rel="nowfollow" '.$strTarget.'href="%s">%s</a>%s', $prefix, $url, $text, $suffix);
+    };
 
     return preg_replace_callback($pattern, $callback, $text);
   }
@@ -1470,7 +1540,7 @@ class AI1EC_Fixes {
     }
   }
 
-  public function ai1ecf_add_missing_categories_and_tags( $bNoEmailSend = false ) {
+  public function ai1ecf_add_missing_categories_and_tags( $bNoEmailSend = false, $bOnlyMissing = false ) {
     $this->ai1ecf_maybe_set_ai1ec_terms();
 
     $strField = "cats-tags";
@@ -1485,7 +1555,7 @@ class AI1EC_Fixes {
     $aOptionValues[$strOptionNameEnable] = (isset($aOptionValues[$strOptionNameEnable]) && $aOptionValues[$strOptionNameEnable] == '1');
     if (!isset($aOptionValues[$strOptionNameFestivalCategory])) { $aOptionValues[$strOptionNameFestivalCategory]  = $this->strOptionValueNone; }
     if (!isset($aOptionValues[$strOptionNamePartyCategory])) { $aOptionValues[$strOptionNamePartyCategory]  = $this->strOptionValueNone; }
-    $aOptionValues[$strOptionNameResendPostsWithMissingTerm] = (isset($aOptionValues[$strOptionNameResendPostsWithMissingTerm]) && $aOptionValues[$strOptionNameResendPostsWithMissingTerm] == '1');
+    $aOptionValues[$strOptionNameResendPostsWithMissingTerm] = (isset($aOptionValues[$strOptionNameResendPostsWithMissingTerm]) && $aOptionValues[$strOptionNameResendPostsWithMissingTerm] == '1') || $bOnlyMissing;
 
     $strFieldPostIDsUsedInNotifications = 'cats-tags_posts-used-in-notifications';
     $aPostIDsUsedInNotifications = $this->ai1ecf_get_option_field( $strFieldPostIDsUsedInNotifications );
@@ -1902,7 +1972,7 @@ class AI1EC_Fixes {
     $domDocument->appendChild( $domEmailBody );
 
     $bEmailEmpty = true;
-    if (!empty($aAssignTerms)) {
+    if (!empty($aAssignTerms) && !$bOnlyMissing) {
       $bEmailEmpty = false;
       $domEmailBody->appendChild( $domDocument->createElement( 'h4', $this->aPlaceholderValues["header-cats-tags-assigned-ok"] ) );
       $domAssignedTermsTable = $domDocument->createElement( 'table' );
