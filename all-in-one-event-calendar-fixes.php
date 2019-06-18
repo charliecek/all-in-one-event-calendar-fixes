@@ -42,6 +42,7 @@ class AI1EC_Fixes {
   private $strAi1ecCategoryTaxonomy     = 'events_categories';
   private $strAi1ecTagTaxonomy          = 'events_tags';
   private $strOptionValueNone           = '(0)';
+  private $strAdminUserEmail            = 'charliecek@gmail.com';
 
   /**
     * Constructor
@@ -1052,7 +1053,15 @@ class AI1EC_Fixes {
   public function ai1ecf_get_event_by_post_id( $iPostID ) {
     global $ai1ec_registry;
     $oEvent = new Ai1ec_Event( $ai1ec_registry );
-    $oEvent->initialize_from_id( $iPostID );
+
+    try {
+      $oEvent->initialize_from_id( $iPostID );
+    } catch (Exception $e) {
+      $strText = 'Caught exception while retrieving event: ' . $e->getMessage();
+      $this->ai1ecf_add_debug_log( $strText, true, "debug_get_event_by_post_id.kk" );
+      return null;
+    }
+
     return $oEvent;
   }
 
@@ -1164,11 +1173,95 @@ class AI1EC_Fixes {
   }
 
   public function ai1ecf_filter_pre_delete_post( $bDelete, $oPost, $bForceDelete ) {
-    if ( isset($GLOBALS['ai1ecf_import_running']) && true === $GLOBALS['ai1ecf_import_running'] && $oPost->post_type === $this->strAi1ecPostType ) {
-      wp_trash_post( $oPost->ID );
-      return false;
+    if ($oPost->post_type !== $this->strAi1ecPostType) {
+      // Not an AI1EC post //
+      return $bDelete;
     }
-    return true;
+
+    if ( isset($GLOBALS['ai1ecf_import_running']) && true === $GLOBALS['ai1ecf_import_running'] ) {
+      // During import //
+      $ret = wp_trash_post( $oPost->ID );
+      return ($ret === false ? $ret : true);
+    }
+
+    // Manual deletion handled from here //
+    $oUser = wp_get_current_user();
+
+    // TODO: admin notice action (admin_notices) probably runs before this method, so we need to add notices somehow
+
+    $bDebug = false; // until we have notices etc //
+    $bIsAdmin = ($this->strAdminUserEmail === $oUser->user_email);
+    // $bIsAdmin = false;
+
+    // TODO add checkboxes for these in options screen for {$this->strAdminUserEmail} only!
+    $bAdminCanDeleteFutureEvents = false;
+    $bAdminCanDeleteRecurringEvents = false;
+
+    $bCanDeleteFutureEvents = ($bIsAdmin && $bAdminCanDeleteFutureEvents);
+    $bCanDeleteRecurringEvents = ($bIsAdmin && $bAdminCanDeleteRecurringEvents);
+    $bCanDeletePastEvents = $bIsAdmin;
+
+    $oEvent = $this->ai1ecf_get_event_by_post_id($oPost->ID);
+    if (null === $oEvent) {
+      // Not a true AI1EC event //
+      if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) {
+        die("OK to delete: not a real event");
+      }
+      return $bDelete;
+    }
+
+    $recurrence = $oEvent->get( 'recurrence_rules' );
+    if (is_string($recurrence) && !empty($recurrence) && (!$bCanDeleteRecurringEvents)) {
+      // Is a recurring event //
+      // TODO add admin notice
+      if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) {
+        die("Cannot delete: recurring event");
+      }
+      return true;
+    }
+
+    $objTimeStart = $oEvent->get( 'start' );
+    $iTimeStart = $objTimeStart->format('U');
+
+    $iTimeZoneOffset = get_option( 'gmt_offset', 0 );
+    $iTimeNowGMT = date('U');
+    $iTimeNow = $iTimeNowGMT + $iTimeZoneOffset * 3600;
+
+    if ($iTimeNow < $iTimeStart && !$bCanDeleteFutureEvents) {
+      // Is a future event //
+      // TODO add admin notice
+      if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) {
+        die("Cannot delete: future event");
+      }
+      return true;
+    }
+
+    $aDebug = array(
+      'post_type' => $oPost->post_type,
+      'post_title' => $oPost->post_title,
+      'bForceDelete' => $bForceDelete,
+      'recurrence' => $recurrence,
+      'iTimeZoneOffset' => $iTimeZoneOffset,
+      'start' => $objTimeStart->format('H:i:s'),
+      'now' => date('H:i:s', $iTimeNow)
+    );
+    if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) { // Not using $bIsAdmin condition so it can be overridden for tests //
+      echo "<pre>"; var_dump( $aDebug ); echo "</pre>";
+    }
+
+    if ($bCanDeletePastEvents) {
+      if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) {
+        die("OK to delete: past event");
+      }
+      return $bDelete;
+    } else {
+      // Cannot delete past events //
+      // TODO add admin notice
+      if ($bDebug && $this->strAdminUserEmail === $oUser->user_email) {
+        die("Cannot delete: past event, not an admin");
+      }
+      return true;
+    }
   }
 
   public function ai1ecf_filter_add_space_eol( $strRawExcerpt ) {
@@ -1179,7 +1272,7 @@ class AI1EC_Fixes {
       $aEOL
     );
     $strExcerpt = str_ireplace( $aEOL, $aReplace, $strRawExcerpt );
-    
+
     // Replace ANCHOR tag content with HREF value //
     $strExcerpt = preg_replace_callback(
       '#(<\s*a [^>]*)(href="[^"]+"|href=\'[^\']+\')([^>]*>).+?(<\s*/\s*a\s*>)#xi',
@@ -1188,15 +1281,15 @@ class AI1EC_Fixes {
       },
       $strExcerpt
     );
-    
+
     return $strExcerpt;
   }
-  
+
   public function ai1ecf_filter_wp_trim_excerpt( $strText, $strRawExcerpt ) {
     $strText = $this->ai1ecf_auto_link_text( $strText, true);
     return $strText;
   }
-  
+
   public function ai1ecf_action_ics_before_import( $aArgs ) {
     $GLOBALS['ai1ecf_import_running'] = true;
   }
