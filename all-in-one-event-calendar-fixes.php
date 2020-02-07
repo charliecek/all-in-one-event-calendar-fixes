@@ -5,7 +5,7 @@
  * Short Description: Fixes for AI1EC and adds event related improvements
  * Author: charliecek
  * Author URI: http://charliecek.eu/
- * Version: 1.5.7
+ * Version: 1.6.0
  * Requires at least: 4.8
  * Tested up to: 4.9.8
  * Requires PHP: 5.6
@@ -13,7 +13,7 @@
  * License URI: https://www.gnu.org/licenses/gpl.html
  */
 
-define( "AI1ECF_VERSION", "1.5.7" );
+define( "AI1ECF_VERSION", "1.6.0" );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT", 10 );
 define( "ATTACHMENT_COUNT_NUMBER_LIMIT_TIMEOUT", 2 * 60 );
 define( "AI1ECF_OPTION_LOC_FIELDS", "venue,address,contact_name" );
