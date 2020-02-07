@@ -13,6 +13,13 @@ All-in-One Event Calendar Fixes And Event related improvements
 
 **Version history**
 
+= v1.5.7: added missing term preview =
+[View on Github](https://github.com/charliecek/all-in-one-event-calendar-fixes/releases/tag/v1.5.7)
+- fix: replaced deprecated (php >=7.2.0) create_function by an anonymous one
+- added missing category and tag preview
+- added option to turn on/off email and missing term preview
+- added PUC/WP compatible readme
+
 = v1.5.6: Cron scheduler, Menu page (+fix) =
 [View on Github](https://github.com/charliecek/all-in-one-event-calendar-fixes/releases/tag/v1.5.6)
 - Added cron scheduler
