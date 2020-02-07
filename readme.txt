@@ -13,6 +13,13 @@ All-in-One Event Calendar Fixes And Event related improvements
 
 **Version history**
 
+= v1.6.0: Added AI1EC release checker cron. =
+[View on Github](https://github.com/charliecek/all-in-one-event-calendar-fixes/releases/tag/v1.6.0)
+- Added AI1EC release checker cron.
+- Fixed minor bugs.
+- Formatted code.
+- Fixed getting event by post ID. Adding pre_delete conditions for admin.
+
 = v1.5.7: added missing term preview =
 [View on Github](https://github.com/charliecek/all-in-one-event-calendar-fixes/releases/tag/v1.5.7)
 - fix: replaced deprecated (php >=7.2.0) create_function by an anonymous one
