@@ -25,11 +25,6 @@ define( "AI1ECF_PATH_TO_TEMPLATES", __DIR__ . "/view/" );
 define( "AI1ECF_LOCATION_OVERRIDE_POSTMETA_ID", "ai1ecf-location-override" );
 define( "AI1ECF_SKIP_EVENT_UPDATE_FROM_FEED_POSTMETA_ID", "ai1ecf-location-skip-event-update-from-feed" );
 
-/*
-TODO: skipping post refresh
-  in filter ai1ec_pre_init_event_from_feed remove the data that we do not want to update - TODO test if that works!
-*/
-
 class AI1EC_Fixes {
 
   private static $instance;
