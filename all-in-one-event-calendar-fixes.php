@@ -71,6 +71,7 @@ class AI1EC_Fixes {
     add_action( 'ai1ecf_send_newsletter_reminder', array( $this, 'ai1ecf_send_newsletter_reminder' ) );
     add_action( 'ai1ecf_add_missing_categories_and_tags', array( $this, 'ai1ecf_add_missing_categories_and_tags' ) );
     add_action( 'ai1ecf_cron_scheduler', array( $this, 'cron_scheduler' ) );
+    add_action( 'ai1ecf_ai1ec_release_checker', array( $this, 'ai1ec_release_checker' ) );
 
 
     $this->aFieldToPlaceholders = array(
@@ -286,8 +287,13 @@ class AI1EC_Fixes {
     $bCronsAdded = $this->ai1ecf_get_option_field( "crons_added", false );
     if ( ! $bCronsAdded ) {
       $this->ai1ecf_maybe_add_crons();
-    } elseif ( ! wp_next_scheduled( 'ai1ecf_cron_scheduler' ) ) {
-      wp_schedule_event( time(), 'hourly', 'ai1ecf_cron_scheduler' );
+    } else {
+      if ( ! wp_next_scheduled( 'ai1ecf_cron_scheduler' ) ) {
+        wp_schedule_event( time(), 'hourly', 'ai1ecf_cron_scheduler' );
+      }
+      if ( ! wp_next_scheduled( 'ai1ecf_ai1ec_release_checker' ) ) {
+        wp_schedule_event( time(), 'daily', 'ai1ecf_ai1ec_release_checker' );
+      }
     }
   }
 
@@ -315,6 +321,9 @@ class AI1EC_Fixes {
     if ( ! wp_next_scheduled( 'ai1ecf_cron_scheduler' ) ) {
       wp_schedule_event( time(), 'hourly', 'ai1ecf_cron_scheduler' );
     }
+    if ( ! wp_next_scheduled( 'ai1ecf_ai1ec_release_checker' ) ) {
+      wp_schedule_event( time(), 'daily', 'ai1ecf_ai1ec_release_checker' );
+    }
     $this->ai1ecf_save_option_field( "crons_added", true );
   }
 
@@ -328,6 +337,49 @@ class AI1EC_Fixes {
     wp_clear_scheduled_hook( 'ai1ecf_send_newsletter_reminder' );
     wp_clear_scheduled_hook( 'ai1ecf_add_missing_categories_and_tags' );
     wp_clear_scheduled_hook( 'ai1ecf_cron_scheduler' );
+    wp_clear_scheduled_hook( 'ai1ecf_ai1ec_release_checker' );
+  }
+
+  public function ai1ec_release_checker() {
+    if ( function_exists( 'fetch_feed' ) ) {
+      $oFeed = fetch_feed( 'https://plugins.trac.wordpress.org/log/all-in-one-event-calendar/?limit=100&mode=stop_on_copy&format=rss' ); // this is the external website's RSS feed URL
+      if ( ! is_wp_error( $oFeed ) ) {
+        $oFeed->init();
+        $oFeed->set_output_encoding( 'UTF-8' ); // this is the encoding parameter, and can be left unchanged in almost every case
+        $oFeed->handle_content_type(); // this double-checks the encoding type
+        $oFeed->set_cache_duration( 24 * 60 * 60 ); // 24 hours in seconds
+        $iLimit = $oFeed->get_item_quantity( 20 ); // fetches the 18 most recent RSS feed stories
+
+        if ( $iLimit > 0 ) {
+          $aItems = $oFeed->get_items( 0, $iLimit ); // this sets the limit and array for parsing the feed
+
+          $aVersionsOld = get_site_option( "ai1ecf_ai1ec_releases", array() );
+          $aVersions    = array();
+          $aVersionsNew = array();
+          foreach ( $aItems as $oItem ) {
+            $strTitle = $oItem->get_title();
+            $aMatches = array();
+            if ( preg_match( "~^Revision \d+: Releasing version (\d+(\.\d+)*)~", $strTitle, $aMatches ) ) {
+              $strVersion  = $aMatches[1];
+              $aVersions[] = $strVersion;
+
+              if ( ! in_array( $strVersion, $aVersionsOld ) && ( ! defined( "AI1EC_VERSION" ) || version_compare( $strVersion, AI1EC_VERSION ) > 0 ) ) {
+                $aVersionsNew[] = $strVersion;
+              }
+            }
+          }
+
+          update_site_option( "ai1ecf_ai1ec_releases", $aVersions );
+
+          if ( ! empty( $aVersionsNew ) ) {
+            $aHeaders   = array( 'Content-Type: text/html; charset=UTF-8' );
+            $bSingle    = count( $aVersionsNew ) === 1;
+            $strMessage = ( $bSingle ? "New version:" : "New versions:" ) . implode( ", ", $aVersionsNew ) . "." . PHP_EOL . "Current version:" . AI1EC_VERSION . ".";
+            wp_mail( $this->strAdminUserEmail, $bSingle ? "New AI1EC version was released" : "New AI1EC versions were released", $strMessage, $aHeaders );
+          }
+        }
+      }
+    }
   }
 
   public function cron_scheduler() {
