@@ -448,6 +448,10 @@ class AI1EC_Fixes {
 
   public function ai1ecf_event_save_post() {
     global $post;
+    if (!$post) {
+      return;
+    }
+
     if ( isset( $_POST['ai1ecf_event_location_override_metabox_input'] ) ) {
       update_post_meta( $post->ID, AI1ECF_LOCATION_OVERRIDE_POSTMETA_ID, $_POST['ai1ecf_event_location_override_metabox_input'] );
     }
